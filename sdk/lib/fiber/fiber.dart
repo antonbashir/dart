@@ -63,14 +63,21 @@ extension type FiberAttributes(int _attributes) {
   }
 }
 
-extension type FiberArguments(List _arguments) {
+extension type FiberArgument(Object? _argument) {
   @pragma("vm:prefer-inline")
-  dynamic operator [](int index) => _arguments[index];
+  T? single<T>() => _argument as T?;
 
   @pragma("vm:prefer-inline")
-  List<dynamic> get value => _arguments;
-  
-  String string(int index) => this[index] as String;
+  T? positioned<T>(int index) => _argument == null ? null : asArray![index];
+
+  @pragma("vm:prefer-inline")
+  T? named<T>(String key) => _argument == null ? null : asMap![key];
+
+  @pragma("vm:prefer-inline")
+  List? get asArray => _argument == null ? [] : _argument as List;
+
+  @pragma("vm:prefer-inline")
+  Map? get asMap => _argument == null ? {} : _argument as Map;
 }
 
 class _Coroutine {
@@ -87,8 +94,8 @@ class _Coroutine {
   external void Function() get _trampoline;
   external set _trampoline(void Function() value);
 
-  external List get _arguments;
-  external set _arguments(List value);
+  external Object? get _argument;
+  external set _argument(Object? value);
 
   external int get _attributes;
   external set _attributes(int value);
@@ -120,14 +127,14 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
   static void launch(
     void Function() entry, {
-    List arguments = const [],
     bool terminate = false,
     int size = _kDefaultStackSize,
     void Function()? idle,
+    Object? argument,
   }) =>
       _FiberProcessor(idle: idle)._process(
         entry,
-        arguments: arguments,
+        argument: argument,
         terminate: terminate,
         size: size,
       );
@@ -135,14 +142,14 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
   factory Fiber.child(
     void Function() entry, {
-    List arguments = const [],
     bool persistent = false,
     int size = _kDefaultStackSize,
     String? name,
+    Object? argument,
   }) =>
       _FiberFactory._child(
         entry,
-        arguments: arguments,
+        argument: argument,
         size: size,
         name: name,
         persistent: persistent,
@@ -151,14 +158,13 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
   static Fiber spawn(
     void Function() entry, {
-    List arguments = const [],
     bool persistent = false,
     int size = _kDefaultStackSize,
     String? name,
+    Object? argument,
   }) {
     final child = _FiberFactory._child(
       entry,
-      arguments: arguments,
       size: size,
       name: name,
       persistent: persistent,
@@ -229,7 +235,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   FiberAttributes get attributes => FiberAttributes(_coroutine._attributes);
 
   @pragma("vm:prefer-inline")
-  FiberArguments get arguments => FiberArguments(_coroutine._arguments);
+  FiberArgument get argument => FiberArgument(_coroutine._argument);
 
   @pragma("vm:never-inline")
   static void _run() => _Coroutine._current!._entry();

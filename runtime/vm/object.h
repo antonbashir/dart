@@ -12793,9 +12793,9 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, attributes_);
   }
 
-  ObjectPtr arguments() const { return untag()->arguments(); }
-  static uword arguments_offset() {
-    return OFFSET_OF(UntaggedCoroutine, arguments_);
+  ObjectPtr argument() const { return untag()->argument(); }
+  static uword argument_offset() {
+    return OFFSET_OF(UntaggedCoroutine, argument_);
   }
 
   CoroutinePtr caller() const { return untag()->caller(); }

@@ -406,7 +406,7 @@
   FIELD(Coroutine, name_offset)                                                \
   FIELD(Coroutine, entry_offset)                                               \
   FIELD(Coroutine, trampoline_offset)                                          \
-  FIELD(Coroutine, arguments_offset)                                           \
+  FIELD(Coroutine, argument_offset)                                            \
   FIELD(Coroutine, attributes_offset)                                          \
   FIELD(Coroutine, caller_offset)                                              \
   FIELD(Coroutine, scheduler_offset)                                           \

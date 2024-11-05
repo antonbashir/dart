@@ -20,9 +20,9 @@ class _Coroutine {
   @patch
   set _trampoline(void Function() value) => throw UnsupportedError("_Coroutine._current");
   @patch
-  List get _arguments => throw UnsupportedError("_Coroutine._current");
+  Object? get _argument => throw UnsupportedError("_Coroutine._current");
   @patch
-  set _arguments(List value) => throw UnsupportedError("_Coroutine._current");
+  set _argument(Object? value) => throw UnsupportedError("_Coroutine._current");
   @patch
   int get _attributes => throw UnsupportedError("_Coroutine._current");
   @patch

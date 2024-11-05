@@ -1040,7 +1040,7 @@ class Coroutine : public AllStatic {
   static word index_offset();
   static word entry_offset();
   static word trampoline_offset();
-  static word arguments_offset();
+  static word argument_offset();
   static word attributes_offset();
   static word caller_offset();
   static word scheduler_offset();

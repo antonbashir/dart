@@ -2,12 +2,12 @@ import 'dart:fiber';
 import 'dart:async';
 import 'package:expect/expect.dart';
 
-final tests = <Function>[
+final tests = [
   testEmpty,
   testIdle,
   testTerminated,
   testFunction,
-  testGlobalState,
+  testFork,
 ];
 
 void testEmpty() {
@@ -27,29 +27,22 @@ void testTerminated() {
 
 void testFunction() {
   void entry() {
-    Expect.equals("argument", Fiber.current().arguments[0]);
+    Expect.equals("argument", Fiber.current().argument.positioned(0));
   }
 
-  Fiber.launch(entry, arguments: <String>["argument"], terminate: true);
+  Fiber.launch(entry, argument: ["argument"], terminate: true);
 }
 
-var testGlobalStateValue = "";
-void testGlobalStateMain() {
-  testGlobalStateValue = "";
-  testGlobalStateValue += "main -> ";
-  Fiber.schedule(Fiber.current());
-  Fiber.spawn(testGlobalStateChild);
-  testGlobalStateValue += "main -> ";
-  Fiber.reschedule();
-  Expect.equals("main -> child -> main -> child", testGlobalStateValue);
-}
+void testFork() {
+  void child() {
+    print(Fiber.current().argument.single() == null);
+    Expect.equals("child", Fiber.current().argument.positioned(0));
+  }
 
-void testGlobalStateChild() {
-  testGlobalStateValue += "child -> ";
-  Fiber.reschedule();
-  testGlobalStateValue += "child";
-}
+  void main() {
+    Expect.equals("main", Fiber.current().argument.positioned(0));
+    Fiber.spawn(child, argument: ["child"]);
+  }
 
-void testGlobalState() {
-  Fiber.launch(testGlobalStateMain, terminate: true);
+  Fiber.launch(main, argument: ["main"], terminate: true);
 }

@@ -14,10 +14,11 @@ void main(List<String> arguments) {
   if (suite == null) return;
   print("Processing suite: ${arguments[0]}");
   for (var test in suite!) {
-    if (arguments.length == 1 || test.toString().toLowerCase().contains("void from Function 'test${arguments[1]}'".toLowerCase())) {
-      print("Processing test: ${test.toString()}");
+    final function = RegExp(r"Function 'test(.+)'").firstMatch(test.toString())!.group(1);
+    if (arguments.length == 1 || function == arguments[1].toLowerCase()) {
+      print("Processing test: test${function}");
       test();
-      print("Test: ${test.toString()} finished");
+      print("Test: test${function} finished");
     }
   }
   print("Suite: ${arguments[0]} finished");

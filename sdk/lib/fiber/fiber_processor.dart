@@ -64,14 +64,14 @@ class _FiberProcessor {
 
   void _process(
     void Function() entry, {
-    List arguments = const [],
     int size = _kDefaultStackSize,
     bool terminate = false,
+    Object? argument,
   }) {
     if (_running) throw StateError("FiberProcessor is running");
     _terminate = terminate;
     _entry = entry;
-    _schedule(_FiberFactory._main(this, _main, arguments: arguments, size: size));
+    _schedule(_FiberFactory._main(this, _main, argument: argument, size: size));
     _running = true;
     _Coroutine._initialize(_scheduler);
     _running = false;

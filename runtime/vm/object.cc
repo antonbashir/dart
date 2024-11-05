@@ -26744,7 +26744,7 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
   untag()->set_name(String::null());
   untag()->set_entry(Closure::null());
   untag()->set_trampoline(Function::null());
-  untag()->set_arguments(Array::empty_array().ptr());
+  untag()->set_argument(Object::null());
   untag()->set_caller(Coroutine::null());
   untag()->set_scheduler(Coroutine::null());
   untag()->set_processor(Object::null());
