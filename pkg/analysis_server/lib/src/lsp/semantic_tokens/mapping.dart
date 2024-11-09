@@ -135,7 +135,7 @@ final highlightRegionTokenTypes = {
   HighlightRegionType.INSTANCE_METHOD_DECLARATION: SemanticTokenTypes.method,
   HighlightRegionType.INSTANCE_METHOD_REFERENCE: SemanticTokenTypes.method,
   HighlightRegionType.INSTANCE_METHOD_TEAR_OFF: SemanticTokenTypes.method,
-  HighlightRegionType.INSTANCE_SETTER_DECLARATION: SemanticTokenTypes.property,
+  HighlightRegionType.INSTANCE_SETTER_DECLARATION: SemanticTokenTypes.function,
   HighlightRegionType.INSTANCE_SETTER_REFERENCE: SemanticTokenTypes.function,
   HighlightRegionType.KEYWORD: SemanticTokenTypes.keyword,
   HighlightRegionType.LIBRARY_NAME: SemanticTokenTypes.namespace,
@@ -157,7 +157,7 @@ final highlightRegionTokenTypes = {
   HighlightRegionType.STATIC_METHOD_DECLARATION: SemanticTokenTypes.method,
   HighlightRegionType.STATIC_METHOD_REFERENCE: SemanticTokenTypes.method,
   HighlightRegionType.STATIC_METHOD_TEAR_OFF: SemanticTokenTypes.method,
-  HighlightRegionType.STATIC_SETTER_DECLARATION: SemanticTokenTypes.property,
+  HighlightRegionType.STATIC_SETTER_DECLARATION: SemanticTokenTypes.function,
   HighlightRegionType.STATIC_SETTER_REFERENCE: SemanticTokenTypes.function,
   HighlightRegionType.TOP_LEVEL_FUNCTION_DECLARATION:
       SemanticTokenTypes.function,
@@ -165,7 +165,7 @@ final highlightRegionTokenTypes = {
   HighlightRegionType.TOP_LEVEL_FUNCTION_TEAR_OFF: SemanticTokenTypes.function,
   HighlightRegionType.TOP_LEVEL_GETTER_DECLARATION: SemanticTokenTypes.function,
   HighlightRegionType.TOP_LEVEL_GETTER_REFERENCE: SemanticTokenTypes.function,
-  HighlightRegionType.TOP_LEVEL_SETTER_DECLARATION: SemanticTokenTypes.property,
+  HighlightRegionType.TOP_LEVEL_SETTER_DECLARATION: SemanticTokenTypes.function,
   HighlightRegionType.TOP_LEVEL_SETTER_REFERENCE: SemanticTokenTypes.function,
   HighlightRegionType.TOP_LEVEL_VARIABLE: SemanticTokenTypes.property,
   HighlightRegionType.TOP_LEVEL_VARIABLE_DECLARATION:
