@@ -62,7 +62,7 @@ class _FiberProcessor {
     _FiberProcessorLink._create(_scheduler);
   }
 
-  void _process(
+  Fiber _process(
     void Function() entry, {
     int size = _kDefaultStackSize,
     bool terminate = false,
@@ -71,22 +71,24 @@ class _FiberProcessor {
     if (_running) throw StateError("FiberProcessor is running");
     _terminate = terminate;
     _entry = entry;
-    _schedule(_FiberFactory._main(this, _main, argument: argument, size: size));
+    final fiber = _FiberFactory._main(this, _main, argument: argument, size: size);
+    _schedule(fiber);
     _running = true;
     _Coroutine._initialize(_scheduler);
     _running = false;
+    return fiber;
   }
 
   @pragma("vm:never-inline")
   static void _main() {
-    final processor = Fiber.current()._processor;
+    final processor = Fiber.current._processor;
     processor._entry();
     if (processor._terminate && processor._running) Fiber.terminate();
   }
 
   @pragma("vm:never-inline")
   static void _loop() {
-    final scheduler = Fiber.current();
+    final scheduler = Fiber.current;
     final processor = scheduler._processor;
     final scheduled = processor._scheduled;
     final idle = processor._idle;

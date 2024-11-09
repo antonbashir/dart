@@ -18,7 +18,7 @@ void testGlobalState() {
   void main() {
     globalStateValue = "";
     globalStateValue += "main -> ";
-    Fiber.schedule(Fiber.current());
+    Fiber.schedule(Fiber.current);
     Fiber.spawn(child);
     globalStateValue += "main -> ";
     Fiber.reschedule();
@@ -44,7 +44,7 @@ void testClosureState() {
     () {
       Expect.equals("localState", localState);
       localState = "after main fiber";
-      Fiber.schedule(Fiber.current());
+      Fiber.schedule(Fiber.current);
       Fiber.spawn(
         () {
           Expect.equals("after main fiber", localState);

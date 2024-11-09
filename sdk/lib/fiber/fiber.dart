@@ -80,49 +80,6 @@ extension type FiberArgument(Object? _argument) {
   Map? get asMap => _argument == null ? {} : _argument as Map;
 }
 
-class _Coroutine {
-  external factory _Coroutine._(int size, Function trampoline);
-
-  external String get _name;
-  external set _name(String value);
-
-  external int get _index;
-
-  external void Function() get _entry;
-  external set _entry(void Function() value);
-
-  external void Function() get _trampoline;
-  external set _trampoline(void Function() value);
-
-  external Object? get _argument;
-  external set _argument(Object? value);
-
-  external int get _attributes;
-  external set _attributes(int value);
-
-  external _Coroutine get _caller;
-  external set _caller(_Coroutine value);
-
-  external _Coroutine get _scheduler;
-  external set _scheduler(_Coroutine value);
-
-  external _FiberProcessor get _processor;
-  external set _processor(_FiberProcessor value);
-
-  external _Coroutine get _toProcessorNext;
-  external set _toProcessorNext(_Coroutine value);
-
-  external _Coroutine get _toProcessorPrevious;
-  external set _toProcessorPrevious(_Coroutine value);
-
-  external static _Coroutine? get _current;
-
-  external static _Coroutine _at(int index);
-  external static void _initialize(_Coroutine root);
-  external static void _transfer(_Coroutine from, _Coroutine to);
-  external static void _fork(_Coroutine from, _Coroutine to);
-}
-
 extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
   static void launch(
@@ -176,7 +133,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
 
   @pragma("vm:prefer-inline")
   static void fork(Fiber callee) {
-    final caller = Fiber.current();
+    final caller = Fiber.current;
     assert(callee.state.created || callee.state.finished);
     callee._caller = caller;
     caller._attributes = (caller._attributes & ~_kFiberRunning) | _kFiberSuspended;
@@ -186,7 +143,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
 
   @pragma("vm:prefer-inline")
   static void suspend() {
-    final caller = Fiber.current();
+    final caller = Fiber.current;
     final callee = Fiber(caller._caller);
     assert(callee.state.suspended || identical(callee, caller!._scheduler));
     caller._caller = caller._scheduler;
@@ -196,7 +153,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   }
 
   @pragma("vm:prefer-inline")
-  static Fiber current() {
+  static Fiber get current {
     final current = _Coroutine._current;
     assert(current != null);
     return Fiber(current!);
@@ -205,18 +162,18 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
   static void schedule(Fiber fiber) {
     assert(fiber.state.suspended || fiber.state.running);
-    Fiber.current()._processor._schedule(fiber);
+    Fiber.current._processor._schedule(fiber);
   }
 
   @pragma("vm:prefer-inline")
   static void reschedule() {
-    Fiber.schedule(Fiber.current());
+    Fiber.schedule(Fiber.current);
     Fiber.suspend();
   }
 
   @pragma("vm:prefer-inline")
   static void terminate() {
-    Fiber.current()._processor._stop();
+    Fiber.current._processor._stop();
     Fiber.suspend();
   }
 
@@ -240,4 +197,47 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
 
   @pragma("vm:never-inline")
   static void _run() => _Coroutine._current!._entry();
+}
+
+class _Coroutine {
+  external factory _Coroutine._(int size, Function trampoline);
+
+  external String get _name;
+  external set _name(String value);
+
+  external int get _index;
+
+  external void Function() get _entry;
+  external set _entry(void Function() value);
+
+  external void Function() get _trampoline;
+  external set _trampoline(void Function() value);
+
+  external Object? get _argument;
+  external set _argument(Object? value);
+
+  external int get _attributes;
+  external set _attributes(int value);
+
+  external _Coroutine get _caller;
+  external set _caller(_Coroutine value);
+
+  external _Coroutine get _scheduler;
+  external set _scheduler(_Coroutine value);
+
+  external _FiberProcessor get _processor;
+  external set _processor(_FiberProcessor value);
+
+  external _Coroutine get _toProcessorNext;
+  external set _toProcessorNext(_Coroutine value);
+
+  external _Coroutine get _toProcessorPrevious;
+  external set _toProcessorPrevious(_Coroutine value);
+
+  external static _Coroutine? get _current;
+
+  external static _Coroutine _at(int index);
+  external static void _initialize(_Coroutine root);
+  external static void _transfer(_Coroutine from, _Coroutine to);
+  external static void _fork(_Coroutine from, _Coroutine to);
 }

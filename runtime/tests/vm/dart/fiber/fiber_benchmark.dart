@@ -12,7 +12,7 @@ void main() {
 void benchmark() {
   final jobs = <Fiber>[];
   for (var i = 0; i < fibers; i++) {
-    Fiber.schedule(Fiber.current());
+    Fiber.schedule(Fiber.current);
     jobs.add(Fiber.spawn(scheduling));
   }
   for (var i = 0; i < fibers; i++) {

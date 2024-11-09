@@ -37,7 +37,7 @@ class _FiberFactory {
     bool persistent = false,
     String? name,
   }) {
-    final current = Fiber.current();
+    final current = Fiber.current;
     final coroutine = _Coroutine._(size, Fiber._run);
     coroutine._name = name ?? entry.toString();
     coroutine._entry = entry;
