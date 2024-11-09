@@ -16,6 +16,15 @@ const _kFiberFinished = 1 << 3;
 const _kFiberDisposed = 1 << 4;
 const _kFiberPersistent = 1 << 5;
 
+enum FiberStateKind {
+  created,
+  running,
+  suspended,
+  finished,
+  disposed,
+  unknown
+}
+
 extension type FiberState(int _state) {
   @pragma("vm:prefer-inline")
   bool get created => _state & _kFiberCreated != 0;
@@ -35,13 +44,14 @@ extension type FiberState(int _state) {
   @pragma("vm:prefer-inline")
   int get value => _state;
 
-  String string() {
-    if (created) return "created";
-    if (running) return "running";
-    if (suspended) return "suspended";
-    if (finished) return "finished";
-    if (disposed) return "disposed";
-    return "unknown";
+  @pragma("vm:prefer-inline")
+  FiberStateKind get kind {
+    if (created) return FiberStateKind.created;
+    if (running) return FiberStateKind.running;
+    if (suspended) return FiberStateKind.suspended;
+    if (finished) return FiberStateKind.finished;
+    if (disposed) return FiberStateKind.disposed;
+    return FiberStateKind.unknown;
   }
 }
 
@@ -82,7 +92,7 @@ extension type FiberArgument(Object? _argument) {
 
 extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
-  static void launch(
+  static Fiber launch(
     void Function() entry, {
     bool terminate = false,
     int size = _kDefaultStackSize,

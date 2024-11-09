@@ -14,9 +14,9 @@ final tests = [
 
 void testEmpty() {
   final fiber = Fiber.launch(() {
-    Expect.isTrue(Fiber.current.state.running);
+    Expect.equals(Fiber.current.state.kind, FiberStateKind.running);
   });
-  Expect.isTrue(fiber);
+  Expect.equals(fiber.state.kind, FiberStateKind.disposed);
 }
 
 void testIdle() {
