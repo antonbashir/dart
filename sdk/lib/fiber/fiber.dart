@@ -92,21 +92,6 @@ extension type FiberArgument(Object? _argument) {
 
 extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
-  static Fiber launch(
-    void Function() entry, {
-    bool terminate = false,
-    int size = _kDefaultStackSize,
-    void Function()? idle,
-    Object? argument,
-  }) =>
-      _FiberProcessor(idle: idle)._process(
-        entry,
-        argument: argument,
-        terminate: terminate,
-        size: size,
-      );
-
-  @pragma("vm:prefer-inline")
   factory Fiber.child(
     void Function() entry, {
     bool persistent = false,
@@ -120,6 +105,21 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
         size: size,
         name: name,
         persistent: persistent,
+      );
+
+  @pragma("vm:prefer-inline")
+  static Fiber launch(
+    void Function() entry, {
+    bool terminate = false,
+    int size = _kDefaultStackSize,
+    void Function()? idle,
+    Object? argument,
+  }) =>
+      _FiberProcessor(idle: idle)._process(
+        entry,
+        argument: argument,
+        terminate: terminate,
+        size: size,
       );
 
   @pragma("vm:prefer-inline")

@@ -4,11 +4,13 @@ import 'package:expect/expect.dart';
 import 'fiber_lifecycle_suite.dart' as lifecycle;
 import 'fiber_launch_suite.dart' as launch;
 import 'fiber_state_suite.dart' as state;
+import 'fiber_flow_suite.dart' as flow;
 
 final suites = {
   "launch": launch.tests,
   "state": state.tests,
   "lifecycle": lifecycle.tests,
+  "flow": flow.tests,
 };
 
 void main(List<String> arguments) {
