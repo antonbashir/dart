@@ -6,7 +6,7 @@ var fibers = 100;
 var latency = 0.0;
 
 void main() {
-  Fiber.launch(benchmark, terminate: true);
+  Fiber.launch(benchmark);
 }
 
 void benchmark() {

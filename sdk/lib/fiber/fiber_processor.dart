@@ -65,11 +65,11 @@ class _FiberProcessor {
   Fiber _process(
     void Function() entry, {
     int size = _kDefaultStackSize,
-    bool terminate = false,
+    bool loop = false,
     Object? argument,
   }) {
     if (_running) throw StateError("FiberProcessor is running");
-    _terminate = terminate;
+    _terminate = !loop;
     _entry = entry;
     final fiber = _FiberFactory._main(this, _main, argument: argument, size: size);
     _schedule(fiber);
@@ -111,7 +111,7 @@ class _FiberProcessor {
         if (!processor._running) {
           return;
         }
-        if (scheduled._isEmpty) throw StateError("There are no scheduled fibers after idle");
+        if (scheduled._isEmpty && processor._terminate) throw StateError("There are no scheduled fibers after idle");
       }
     }
   }

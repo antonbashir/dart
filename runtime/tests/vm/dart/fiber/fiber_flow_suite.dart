@@ -20,7 +20,6 @@ void testReturnParent() {
         Expect.equals(state, "child2");
       });
     },
-    terminate: true,
   );
 }
 
@@ -40,7 +39,6 @@ void testReturnParentSuspend() {
         Expect.equals(state, "child2.suspended");
       });
     },
-    terminate: true,
   );
 }
 
@@ -70,6 +68,5 @@ void testReturnParentDead() {
 
       Expect.equals("child1.dead", state);
     },
-    terminate: true,
   );
 }

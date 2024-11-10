@@ -5,12 +5,14 @@ import 'fiber_lifecycle_suite.dart' as lifecycle;
 import 'fiber_launch_suite.dart' as launch;
 import 'fiber_state_suite.dart' as state;
 import 'fiber_flow_suite.dart' as flow;
+import 'fiber_exceptions_suite.dart' as exceptions;
 
 final suites = {
   "launch": launch.tests,
   "state": state.tests,
   "lifecycle": lifecycle.tests,
   "flow": flow.tests,
+  "exceptions": exceptions.tests,
 };
 
 void main(List<String> arguments) {

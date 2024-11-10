@@ -4,7 +4,6 @@ import 'package:expect/expect.dart';
 
 final tests = [
   testEmpty,
-  testIdleError,
   testTerminated,
   testFunction,
   testClosure,
@@ -19,20 +18,13 @@ void testEmpty() {
   Expect.equals(fiber.state.kind, FiberStateKind.disposed);
 }
 
-void testIdleError() {
-  Expect.throws(
-    () => Fiber.launch(() => Fiber.spawn(() => Fiber.reschedule())),
-    (error) => error is StateError && error.message == "There are no scheduled fibers and FiberProcessor idle function is not defined",
-  );
-}
-
 void testTerminated() {
   final fiber = Fiber.launch(() {
     final child = Fiber.spawn(() => Fiber.reschedule());
     Expect.equals(child.state.kind, FiberStateKind.suspended);
     Fiber.reschedule();
     Expect.equals(child.state.kind, FiberStateKind.disposed);
-  }, terminate: true);
+  });
   Expect.equals(fiber.state.kind, FiberStateKind.disposed);
 }
 
@@ -41,14 +33,13 @@ void testFunction() {
     Expect.equals("argument", Fiber.current.argument.positioned(0));
   }
 
-  Fiber.launch(entry, argument: ["argument"], terminate: true);
+  Fiber.launch(entry, argument: ["argument"]);
 }
 
 void testClosure() {
   Fiber.launch(
     () => Expect.equals("argument", Fiber.current.argument.positioned(0)),
     argument: ["argument"],
-    terminate: true,
   );
 }
 
@@ -63,7 +54,7 @@ void testFork() {
     Fiber.spawn(child, name: "child", argument: ["child"]);
   }
 
-  Fiber.launch(main, argument: ["main"], terminate: true);
+  Fiber.launch(main, argument: ["main"]);
 }
 
 void testForks() {
@@ -89,5 +80,5 @@ void testForks() {
     Fiber.spawn(child1, name: "child1", argument: ["child1"]);
   }
 
-  Fiber.launch(main, argument: ["main"], terminate: true);
+  Fiber.launch(main, argument: ["main"]);
 }

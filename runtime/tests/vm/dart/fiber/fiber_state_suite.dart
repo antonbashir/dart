@@ -25,7 +25,7 @@ void testGlobalState() {
     Expect.equals("main -> child -> main -> child", globalStateValue);
   }
 
-  Fiber.launch(main, terminate: true);
+  Fiber.launch(main);
 }
 
 void testClosureState() {
@@ -35,7 +35,6 @@ void testClosureState() {
       Expect.equals("localState", localState);
       localState = "after fiber";
     },
-    terminate: true,
   );
   Expect.equals("after fiber", localState);
 
@@ -59,7 +58,6 @@ void testClosureState() {
       localState = "after child fiber after main fiber";
       Fiber.suspend();
     },
-    terminate: true,
   );
   Expect.equals("finish", localState);
 
@@ -83,7 +81,6 @@ void testClosureState() {
         name: "child",
       );
     },
-    terminate: true,
   );
   Expect.equals("level 4", localState);
 }

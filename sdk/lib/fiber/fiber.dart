@@ -110,7 +110,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
   static Fiber launch(
     void Function() entry, {
-    bool terminate = false,
+    bool loop = false,
     int size = _kDefaultStackSize,
     void Function()? idle,
     Object? argument,
@@ -118,7 +118,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
       _FiberProcessor(idle: idle)._process(
         entry,
         argument: argument,
-        terminate: terminate,
+        loop: loop,
         size: size,
       );
 

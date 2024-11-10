@@ -18,7 +18,6 @@ void testRecycle() {
       Expect.isTrue(child.state.finished);
       Expect.equals("main -> child -> child", localState);
     },
-    terminate: true,
   );
 }
 
@@ -29,6 +28,5 @@ void testDisposed() {
       Fiber.fork(child);
       Expect.isTrue(child.state.disposed);
     },
-    terminate: true,
   );
 }
