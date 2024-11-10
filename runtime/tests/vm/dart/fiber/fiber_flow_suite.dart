@@ -3,11 +3,12 @@ import 'dart:async';
 import 'package:expect/expect.dart';
 
 final tests = [
-  testReturnToParent,
-  testReturnToParentAfterSuspend,
+  testReturnParent,
+  testReturnParentSuspend,
+  testReturnParentDead,
 ];
 
-void testReturnToParent() {
+void testReturnParent() {
   Fiber.launch(
     () {
       Fiber.child(() {
@@ -23,7 +24,7 @@ void testReturnToParent() {
   );
 }
 
-void testReturnToParentAfterSuspend() {
+void testReturnParentSuspend() {
   Fiber.launch(
     () {
       Fiber.child(() {
@@ -38,6 +39,36 @@ void testReturnToParentAfterSuspend() {
         Fiber.suspend();
         Expect.equals(state, "child2.suspended");
       });
+    },
+    terminate: true,
+  );
+}
+
+void testReturnParentDead() {
+  Fiber.launch(
+    () {
+      var state = "main";
+
+      final child1 = Fiber.child(() {
+        Expect.equals("child2", state);
+        state = "child1";
+        Fiber.reschedule();
+        Expect.equals("child2.dead", state);
+        state = "child1.dead";
+      });
+
+      final child2 = Fiber.child(() {
+        state = "child2";
+        Fiber.fork(child1);
+        Expect.equals("child1", state);
+        state = "child2.dead";
+      });
+
+      Fiber.fork(child2);
+
+      Fiber.reschedule();
+
+      Expect.equals("child1.dead", state);
     },
     terminate: true,
   );
