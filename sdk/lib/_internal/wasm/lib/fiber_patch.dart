@@ -12,6 +12,8 @@ class _Coroutine {
   @patch
   int get _index => throw UnsupportedError("_Coroutine._current");
   @patch
+  int get _size => throw UnsupportedError("_Coroutine._current");
+  @patch
   void Function() get _entry => throw UnsupportedError("_Coroutine._current");
   @patch
   set _entry(void Function() value) => throw UnsupportedError("_Coroutine._current");

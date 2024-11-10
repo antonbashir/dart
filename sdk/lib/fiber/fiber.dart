@@ -3,8 +3,8 @@ library dart.fiber;
 part 'fiber_processor.dart';
 part 'fiber_factory.dart';
 
-const _kDefaultStackSize = 128 * (1 << 10);
-const _kSchedulerStackSize = 128 * (1 << 10);
+const _kDefaultStackSize = 512 * (1 << 10);
+const _kSchedulerStackSize = 256 * (1 << 10);
 const _kMainFiber = "main";
 const _kSchedulerFiber = "scheduler";
 
@@ -190,6 +190,9 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   int get index => _coroutine._index;
 
   @pragma("vm:prefer-inline")
+  int get size => _coroutine._size;
+
+  @pragma("vm:prefer-inline")
   String get name => _coroutine._name;
 
   @pragma("vm:prefer-inline")
@@ -212,6 +215,8 @@ class _Coroutine {
   external set _name(String value);
 
   external int get _index;
+
+  external int get _size;
 
   external void Function() get _entry;
   external set _entry(void Function() value);
@@ -243,7 +248,10 @@ class _Coroutine {
   external static _Coroutine? get _current;
 
   external static _Coroutine _at(int index);
+
   external static void _initialize(_Coroutine root);
+
   external static void _transfer(_Coroutine from, _Coroutine to);
+
   external static void _fork(_Coroutine from, _Coroutine to);
 }

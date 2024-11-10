@@ -9208,6 +9208,7 @@ bool Function::RecognizedKindForceOptimize() const {
     case MethodRecognizer::kCoroutine_atIndex:
     case MethodRecognizer::kCoroutine_getAttributes:
     case MethodRecognizer::kCoroutine_getIndex:
+    case MethodRecognizer::kCoroutine_getSize:
     case MethodRecognizer::kCoroutine_setAttributes:
     case MethodRecognizer::kMemCopy:
     // Prevent the GC from running so that the operation is atomic from
@@ -26665,7 +26666,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto& registry = GrowableObjectArray::Handle(isolate->coroutines_registry());
 
   auto page_size = VirtualMemory::PageSize();
-  auto stack_size = ((size_t)size * sizeof(void*) + page_size - 1) / page_size * page_size;
+  auto stack_size = (size + page_size - 1) & ~(page_size - 1);
 
   if (finished->IsNotEmpty()) {
     auto& coroutine = Coroutine::Handle(finished->First()->Value());

@@ -25,6 +25,11 @@ class _Coroutine {
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
+  external int get _size;
+
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
   external void Function() get _entry;
   @patch
   @pragma("vm:recognized", "other")

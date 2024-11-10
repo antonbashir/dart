@@ -188,6 +188,7 @@ class ParsedFunction;
   V(FunctionType, UntaggedFunctionType, packed_type_parameter_counts, Uint16, \
     FINAL)                                                                    \
   V(SubtypeTestCache, UntaggedSubtypeTestCache, num_inputs, Uint32, FINAL)    \
+  V(Coroutine, UntaggedCoroutine, stack_size, IntPtr, VAR)                    \
   V(Coroutine, UntaggedCoroutine, index, IntPtr, VAR)                         \
   V(Coroutine, UntaggedCoroutine, attributes, IntPtr, VAR)
 
@@ -291,11 +292,11 @@ class ParsedFunction;
 // fields, they should never change during a given execution of the code
 // generated for a function and the compiler only does intra-procedural
 // load optimizations.
-#define UNTAGGED_NATIVE_NONDART_SLOTS_LIST(V)       \
-  V(IsolateGroup, _, object_store, false, FINAL)    \
-  V(Thread, _, api_top_scope, false, VAR)           \
-  V(Thread, _, isolate, false, FINAL)               \
-  V(Thread, _, isolate_group, false, FINAL)         \
+#define UNTAGGED_NATIVE_NONDART_SLOTS_LIST(V)    \
+  V(IsolateGroup, _, object_store, false, FINAL) \
+  V(Thread, _, api_top_scope, false, VAR)        \
+  V(Thread, _, isolate, false, FINAL)            \
+  V(Thread, _, isolate_group, false, FINAL)      \
   V(Thread, _, service_extension_stream, false, FINAL)
 
 // No untagged slot on a non-Dart object should contain a GC-movable address.

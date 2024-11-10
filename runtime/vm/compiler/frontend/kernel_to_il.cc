@@ -1165,6 +1165,7 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kCoroutine_getAttributes:
     case MethodRecognizer::kCoroutine_setAttributes:
     case MethodRecognizer::kCoroutine_getIndex:
+    case MethodRecognizer::kCoroutine_getSize:
       return true;
     default:
       return false;
@@ -1978,6 +1979,12 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
     case MethodRecognizer::kCoroutine_getAttributes: {
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
       body += LoadNativeField(Slot::Coroutine_attributes());
+      body += Box(kUnboxedInt64);
+      break;
+    }
+    case MethodRecognizer::kCoroutine_getSize: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += LoadNativeField(Slot::Coroutine_stack_size());
       body += Box(kUnboxedInt64);
       break;
     }
