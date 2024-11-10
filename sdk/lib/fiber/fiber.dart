@@ -110,15 +110,13 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
   static Fiber launch(
     void Function() entry, {
-    bool loop = false,
     int size = _kDefaultStackSize,
     void Function()? idle,
     Object? argument,
   }) =>
-      _FiberProcessor(idle: idle)._process(
+      _FiberProcessor(idle)._process(
         entry,
         argument: argument,
-        loop: loop,
         size: size,
       );
 
@@ -157,8 +155,6 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
     final callee = Fiber(caller._caller);
     assert(callee.state.suspended || identical(callee, caller!._scheduler));
     caller._caller = caller._scheduler;
-    caller._attributes = (caller._attributes & ~_kFiberRunning) | _kFiberSuspended;
-    callee._attributes = (callee._attributes & ~_kFiberSuspended) | _kFiberRunning;
     _Coroutine._transfer(caller, callee);
   }
 

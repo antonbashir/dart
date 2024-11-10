@@ -5,7 +5,7 @@ class _FiberFactory {
   static Fiber _scheduler(_FiberProcessor processor) {
     final coroutine = _Coroutine._(_kSchedulerStackSize, Fiber._run);
     coroutine._name = _kSchedulerFiber;
-    coroutine._entry = processor._terminate ? _FiberProcessor._loopFinite : _FiberProcessor._loopInfinite;
+    coroutine._entry = processor._idle == null ? _FiberProcessor._loopFinite : _FiberProcessor._loopInfinite;
     coroutine._processor = processor;
     coroutine._attributes = _kFiberCreated;
     return Fiber(coroutine);

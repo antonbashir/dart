@@ -17,8 +17,8 @@ class _FiberException implements Exception {
 
 void testIdleException() {
   Expect.throws<StateError>(
-    () => Fiber.launch(() => Fiber.spawn(() => Fiber.reschedule()), loop: true),
-    (error) => error.message == "There are no scheduled fibers and FiberProcessor idle function is not defined",
+    () => Fiber.launch(() => Fiber.spawn(() => Fiber.reschedule()), idle: () => throw StateError("Empty idle")),
+    (error) => error.message == "Empty idle",
   );
 }
 
