@@ -11102,6 +11102,8 @@ class GrowableObjectArray : public Instance {
 
   void Grow(intptr_t new_capacity, Heap::Space space = Heap::kNew) const;
   ObjectPtr RemoveLast() const;
+  void Swap(intptr_t i, intptr_t j) const;
+  ObjectPtr RemoveAt(intptr_t index) const;
 
   virtual TypeArgumentsPtr GetTypeArguments() const {
     return untag()->type_arguments();

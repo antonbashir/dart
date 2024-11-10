@@ -1360,16 +1360,11 @@ class Isolate : public AllStatic {
   static word current_tag_offset();
   static word user_tag_offset();
   static word finalizers_offset();
-  static word isolate_object_store_offset();
+  static word coroutines_registry_offset();
 #if !defined(PRODUCT)
   static word single_step_offset();
   static word has_resumption_breakpoints_offset();
 #endif  // !defined(PRODUCT)
-};
-
-class IsolateObjectStore : public AllStatic {
- public:
-  static word coroutines_registry_offset();
 };
 
 class IsolateGroup : public AllStatic {

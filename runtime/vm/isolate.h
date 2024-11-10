@@ -5,6 +5,8 @@
 #ifndef RUNTIME_VM_ISOLATE_H_
 #define RUNTIME_VM_ISOLATE_H_
 
+#include "vm/compiler/runtime_api.h"
+#include "vm/tagged_pointer.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
@@ -1012,6 +1014,12 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
 
   CoroutineLink* finished_coroutines() { return &finished_coroutines_; }
   CoroutineLink* active_coroutines() { return &active_coroutines_; }
+  
+  GrowableObjectArrayPtr coroutines_registry() { return coroutines_registry_; }
+  void set_coroutines_registry(GrowableObjectArrayPtr coroutines) { coroutines_registry_ = coroutines; }
+  static intptr_t coroutines_registry_offset() {
+    return OFFSET_OF(Isolate, coroutines_registry_);
+  }
 
   IsolateObjectStore* isolate_object_store() const {
     return isolate_object_store_.get();
@@ -1079,10 +1087,6 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   void set_finalizers(const GrowableObjectArray& value);
   static intptr_t finalizers_offset() {
     return OFFSET_OF(Isolate, finalizers_);
-  }
-
-  static intptr_t isolate_object_store_offset() {
-    return OFFSET_OF(Isolate, isolate_object_store_);
   }
 
   Dart_EnvironmentCallback environment_callback() const {
@@ -1574,10 +1578,14 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   bool has_resumption_breakpoints_ = false;
   bool is_system_isolate_ = false;
   std::unique_ptr<IsolateObjectStore> isolate_object_store_;
+  GrowableObjectArrayPtr coroutines_registry_;
   // End accessed from generated code.
 
   IsolateGroup* const isolate_group_;
   IdleTimeHandler idle_time_handler_;
+  CoroutinePtr saved_coroutine_;
+  CoroutineLink active_coroutines_;
+  CoroutineLink finished_coroutines_;
 
 #define ISOLATE_FLAG_BITS(V)                                                   \
   V(ErrorsFatal)                                                               \
@@ -1687,9 +1695,7 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   DeoptContext* deopt_context_ = nullptr;
   FfiCallbackMetadata::Metadata* ffi_callback_list_head_ = nullptr;
   intptr_t ffi_callback_keep_alive_counter_ = 0;
-  CoroutinePtr saved_coroutine_;
-  CoroutineLink active_coroutines_;
-  CoroutineLink finished_coroutines_;
+
 
   GrowableObjectArrayPtr tag_table_;
 

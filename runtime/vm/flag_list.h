@@ -26,19 +26,19 @@ constexpr intptr_t kDefaultOptimizationCounterThreshold = 30000;
 // to conditionally make these into product flags to make the disassembler
 // usable in product mode.
 #if defined(FORCE_INCLUDE_DISASSEMBLER)
-#define DISASSEMBLE_FLAGS(P, R, C, D)                                          \
-  P(disassemble, bool, false, "Disassemble dart code.")                        \
-  P(disassemble_optimized, bool, false, "Disassemble optimized code.")         \
-  P(disassemble_relative, bool, false, "Use offsets instead of absolute PCs")  \
-  P(disassemble_stubs, bool, false, "Disassemble generated stubs.")            \
+#define DISASSEMBLE_FLAGS(P, R, C, D)                                         \
+  P(disassemble, bool, false, "Disassemble dart code.")                       \
+  P(disassemble_optimized, bool, false, "Disassemble optimized code.")        \
+  P(disassemble_relative, bool, false, "Use offsets instead of absolute PCs") \
+  P(disassemble_stubs, bool, false, "Disassemble generated stubs.")           \
   P(support_disassembler, bool, true, "Support the disassembler.")
 #else
-#define DISASSEMBLE_FLAGS(P, R, C, D)                                          \
-  R(disassemble, false, bool, false, "Disassemble dart code.")                 \
-  R(disassemble_optimized, false, bool, false, "Disassemble optimized code.")  \
-  R(disassemble_relative, false, bool, false,                                  \
-    "Use offsets instead of absolute PCs")                                     \
-  R(disassemble_stubs, false, bool, false, "Disassemble generated stubs.")     \
+#define DISASSEMBLE_FLAGS(P, R, C, D)                                         \
+  R(disassemble, false, bool, false, "Disassemble dart code.")                \
+  R(disassemble_optimized, false, bool, false, "Disassemble optimized code.") \
+  R(disassemble_relative, false, bool, false,                                 \
+    "Use offsets instead of absolute PCs")                                    \
+  R(disassemble_stubs, false, bool, false, "Disassemble generated stubs.")    \
   R(support_disassembler, false, bool, true, "Support the disassembler.")
 #endif
 
@@ -242,10 +242,10 @@ constexpr bool FLAG_support_il_printer = false;
   R(eliminate_type_checks, true, bool, true,                                   \
     "Eliminate type checks when allowed by static type analysis.")             \
   D(support_rr, bool, false, "Support running within RR.")                     \
-  P(coroutines_registry_initial_size, int, 64,                                 \
+  P(coroutines_registry_initial_capacity, int, 64,                             \
     "All coroutines array initial size.")                                      \
-  P(coroutines_registry_shrink_marker, int, 1024 * 1024,                       \
-    "Shrink coroutines registry when reached marker size.")                    \
+  P(coroutines_registry_shrink_capacity, int, 1024 * 1024,                     \
+    "Shrink coroutines registry when reached this capacity.")                  \
   P(verify_entry_points, bool, false,                                          \
     "Throw API error on invalid member access through native API. See "        \
     "entry_point_pragma.md")                                                   \

@@ -78,7 +78,6 @@ ErrorPtr IsolateObjectStore::PreallocateObjects(const Object& out_of_memory) {
   resume_capabilities_ = GrowableObjectArray::New();
   exit_listeners_ = GrowableObjectArray::New();
   error_listeners_ = GrowableObjectArray::New();
-  coroutines_registry_ = Array::New(FLAG_coroutines_registry_initial_size);
   dart_args_1_ = Array::New(1);
   dart_args_2_ = Array::New(2);
 

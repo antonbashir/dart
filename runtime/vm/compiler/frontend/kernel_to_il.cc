@@ -1963,8 +1963,8 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
       break;
     }
     case MethodRecognizer::kCoroutine_atIndex: {
-      body += LoadIsolateObjectStore();
-      body += LoadNativeField(Slot::IsolateObjectStore_coroutines_registry());
+      body += LoadIsolate();
+      body += LoadNativeField(Slot::Isolate_coroutines_registry());
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
       body += LoadIndexed(kArrayCid);
       break;
@@ -4706,13 +4706,6 @@ Fragment FlowGraphBuilder::LoadObjectStore() {
   Fragment body;
   body += LoadIsolateGroup();
   body += LoadNativeField(Slot::IsolateGroup_object_store());
-  return body;
-}
-
-Fragment FlowGraphBuilder::LoadIsolateObjectStore() {
-  Fragment body;
-  body += LoadIsolate();
-  body += LoadNativeField(Slot::Isolate_isolate_object_store());
   return body;
 }
 

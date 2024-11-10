@@ -240,12 +240,12 @@ class ParsedFunction;
 //
 // Note: Currently LoadFieldInstr::IsImmutableLengthLoad() assumes that no
 // slots of non-Dart values represent length loads.
-#define NULLABLE_TAGGED_NATIVE_NONDART_SLOTS_LIST(V)        \
-  V(Isolate, _, finalizers, GrowableObjectArray, VAR)       \
-  V(LocalHandle, _, ptr, Dynamic, VAR)                      \
-  V(ObjectStore, _, record_field_names, Array, VAR)         \
-  V(IsolateObjectStore, _, coroutines_registry, Array, VAR) \
-  V(Thread, _, coroutine, Coroutine, VAR)                   \
+#define NULLABLE_TAGGED_NATIVE_NONDART_SLOTS_LIST(V)           \
+  V(Isolate, _, finalizers, GrowableObjectArray, VAR)          \
+  V(Isolate, _, coroutines_registry, GrowableObjectArray, VAR) \
+  V(LocalHandle, _, ptr, Dynamic, VAR)                         \
+  V(ObjectStore, _, record_field_names, Array, VAR)            \
+  V(Thread, _, coroutine, Coroutine, VAR)                      \
   V(PersistentHandle, _, ptr, Dynamic, VAR)
 
 // List of slots that correspond to fields of non-Dart objects containing
@@ -293,7 +293,6 @@ class ParsedFunction;
 // load optimizations.
 #define UNTAGGED_NATIVE_NONDART_SLOTS_LIST(V)       \
   V(IsolateGroup, _, object_store, false, FINAL)    \
-  V(Isolate, _, isolate_object_store, false, FINAL) \
   V(Thread, _, api_top_scope, false, VAR)           \
   V(Thread, _, isolate, false, FINAL)               \
   V(Thread, _, isolate_group, false, FINAL)         \

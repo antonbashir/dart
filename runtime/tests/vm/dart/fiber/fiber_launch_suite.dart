@@ -4,7 +4,7 @@ import 'package:expect/expect.dart';
 
 final tests = [
   testEmpty,
-  testIdle,
+  testIdleError,
   testTerminated,
   testFunction,
   testClosure,
@@ -19,7 +19,7 @@ void testEmpty() {
   Expect.equals(fiber.state.kind, FiberStateKind.disposed);
 }
 
-void testIdle() {
+void testIdleError() {
   Expect.throws(
     () => Fiber.launch(() => Fiber.spawn(() => Fiber.reschedule())),
     (error) => error is StateError && error.message == "There are no scheduled fibers and FiberProcessor idle function is not defined",

@@ -114,9 +114,6 @@ logs/results.json
 doc/api/
 
 build/
-build-sdk-debug.sh
-build-sdk.sh
-build-fiber-test.sh
 *.exe
 *.aot
 *.S

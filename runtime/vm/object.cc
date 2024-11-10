@@ -6,6 +6,7 @@
 
 #include <memory>
 #include "platform/globals.h"
+#include "vm/flags.h"
 
 #if !defined(DART_TARGET_OS_WINDOWS)
 #include <sys/mman.h>
@@ -25056,6 +25057,22 @@ ObjectPtr GrowableObjectArray::RemoveLast() const {
   return obj.ptr();
 }
 
+ObjectPtr GrowableObjectArray::RemoveAt(intptr_t index) const {
+  ASSERT(!IsNull());
+  ASSERT(Length() > 0);
+  intptr_t last = Length() - 1;
+  if (index < last) {
+    Swap(index, last);
+  }
+  return RemoveLast();
+}
+
+void GrowableObjectArray::Swap(intptr_t i, intptr_t j) const {
+  auto temp = At(i);
+  data()->untag()->set_element(i, At(j));
+  data()->untag()->set_element(j, temp);
+}
+
 GrowableObjectArrayPtr GrowableObjectArray::New(intptr_t capacity,
                                                 Heap::Space space) {
   ArrayPtr raw_data = (capacity == 0) ? Object::empty_array().ptr()
@@ -26643,20 +26660,19 @@ CodePtr SuspendState::GetCodeObject() const {
 
 CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto isolate = Isolate::Current();
-  auto object_store = Isolate::Current()->isolate_object_store();
   auto finished = isolate->finished_coroutines();
   auto active = isolate->active_coroutines();
-  auto& registry = Array::Handle(object_store->coroutines_registry());
+  auto& registry = GrowableObjectArray::Handle(isolate->coroutines_registry());
 
   auto page_size = VirtualMemory::PageSize();
-  auto stack_size = (size_t)size * kWordSize + page_size - 1;
+  auto stack_size = ((size_t)size * sizeof(void*) + page_size - 1) / page_size * page_size;
 
   if (finished->IsNotEmpty()) {
     auto& coroutine = Coroutine::Handle(finished->First()->Value());
     coroutine.change_state(CoroutineAttributes::finished, CoroutineAttributes::created);
     CoroutineLink::StealHead(active, coroutine.to_state());
     coroutine.untag()->set_trampoline(trampoline);
-    if (stack_size != coroutine.stack_size()) {
+    if (UNLIKELY(stack_size != coroutine.stack_size())) {
 #if defined(DART_TARGET_OS_WINDOWS)
       VirtualFree((void*)stack_limit(), 0, MEM_RELEASE);
 #else
@@ -26682,7 +26698,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
     return coroutine.ptr();
   }
 
-  const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
+  const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kNew));
 #if defined(DART_TARGET_OS_WINDOWS)
   void* stack_base = (void*)((uintptr_t)VirtualAlloc(
       nullptr, stack_size, MEM_RESERVE | MEM_COMMIT,
@@ -26703,29 +26719,12 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   coroutine.untag()->stack_base_ = stack_base;
   coroutine.untag()->stack_limit_ = stack_limit;
   coroutine.untag()->overflow_stack_limit_ = stack_limit + CalculateHeadroom(stack_base - stack_limit);
-  coroutine.untag()->set_index(-1);
   coroutine.untag()->set_trampoline(trampoline);
 
+  coroutine.untag()->set_index(registry.Length());
+  registry.Add(coroutine);
+
   CoroutineLink::AddHead(active, coroutine.to_state());
-
-  intptr_t free_index = -1;
-  for (auto index = 0; index < registry.Length(); index++) {
-    if (registry.At(index) == Object::null()) {
-      free_index = index;
-      break;
-    }
-  }
-
-  if (free_index == -1) {
-    free_index = registry.Length();
-    auto current_capacity = registry.Length();
-    auto new_capacity = current_capacity = (current_capacity > 1) ? (current_capacity + (current_capacity / 2)) : (current_capacity + 1);
-    registry = Array::Grow(registry, new_capacity, Heap::kOld);
-    object_store->set_coroutines_registry(registry);
-  }
-
-  coroutine.untag()->set_index(free_index);
-  registry.SetAt(free_index, coroutine);
 
   return coroutine.ptr();
 }
@@ -26767,39 +26766,23 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
     return;
   }
 
-  auto object_store = thread->isolate()->isolate_object_store();
-  auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
-  coroutines.SetAt(index(), Object::null_object());
+  auto& coroutines = GrowableObjectArray::Handle(zone, thread->isolate()->coroutines_registry());
+  coroutines.RemoveAt(index());
   untag()->set_index(-1);
 
-  if (coroutines.Length() < FLAG_coroutines_registry_shrink_marker) {
+  if (coroutines.Capacity() < FLAG_coroutines_registry_shrink_capacity) {
     return;
   }
 
-  intptr_t new_length = 0;
+  auto& new_coroutines = GrowableObjectArray::Handle(GrowableObjectArray::New(std::max(coroutines.Length(), (intptr_t)FLAG_coroutines_registry_initial_capacity)));
+  auto& new_coroutine = Coroutine::Handle();
   for (intptr_t index = 0; index < coroutines.Length(); index++) {
-    if (coroutines.At(index) != Object::null()) new_length++;
+    new_coroutine ^= coroutines.At(index);
+    new_coroutine.set_index(new_coroutines.Length());
+    new_coroutines.Add(new_coroutine);
   }
-
-  if (new_length != 0) {
-    auto& coroutine = Coroutine::Handle(zone);
-    auto& new_coroutines = Array::Handle(Array::NewUninitialized(std::max(new_length, (intptr_t)FLAG_coroutines_registry_initial_size)));
-    for (intptr_t index = 0, new_index = 0; index < coroutines.Length(); index++) {
-      if (coroutines.At(index) != Object::null()) {
-        coroutine ^= coroutines.At(index);
-        new_coroutines.SetAt(new_index, coroutine);
-        coroutine.set_index(new_index);
-        new_index++;
-      }
-    }
-    coroutines.Truncate(0);
-    object_store->set_coroutines_registry(new_coroutines);
-    return;
-  }
-
-  coroutines.Truncate(0);
-  coroutines ^= Array::New(FLAG_coroutines_registry_initial_size);
-  object_store->set_coroutines_registry(coroutines);
+  Array::Handle(coroutines.data()).Truncate(0);
+  thread->isolate()->set_coroutines_registry(new_coroutines.ptr());
 }
 
 const char* Coroutine::ToCString() const {
@@ -26812,16 +26795,13 @@ const char* Coroutine::ToCString() const {
 
 void Coroutine::HandleJumpToFrame(Thread* thread, uword stack_pointer) {
   auto zone = thread->zone();
-  auto object_store = thread->isolate()->isolate_object_store();
-  auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
+  auto& coroutines = GrowableObjectArray::Handle(zone, thread->isolate()->coroutines_registry());
   auto& found = Coroutine::Handle(zone);
   for (auto index = 0; index < coroutines.Length(); index++) {
-    if (coroutines.At(index) != Object::null()) {
-      auto candidate = Coroutine::RawCast(coroutines.At(index));
-      if (stack_pointer > candidate.untag()->stack_limit() && stack_pointer <= candidate.untag()->stack_root()) {
-        found ^= candidate;
-        break;
-      }
+    auto candidate = Coroutine::RawCast(coroutines.At(index));
+    if (stack_pointer > candidate.untag()->stack_limit() && stack_pointer <= candidate.untag()->stack_root()) {
+      found ^= candidate;
+      break;
     }
   }
   if (found.IsNull()) {
@@ -26846,43 +26826,38 @@ void Coroutine::HandleRootEnter(Thread* thread, Zone* zone) {
 }
 
 void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
-  auto object_store = thread->isolate()->isolate_object_store();
-  auto& coroutines = Array::Handle(zone, object_store->coroutines_registry());
+  auto& coroutines = GrowableObjectArray::Handle(zone, thread->isolate()->coroutines_registry());
   auto& coroutine = Coroutine::Handle(zone);
 
   intptr_t recycled_count = 0;
   for (auto index = 0; index < coroutines.Length(); index++) {
-    if (coroutines.At(index) != Object::null()) {
-      coroutine ^= coroutines.At(index);
-      if (coroutine.is_persistent() && !coroutine.is_finished()) {
-        coroutine.recycle(zone);
-        recycled_count++;
-        continue;
-      }
-      if (coroutine.is_ephemeral() && !coroutine.is_disposed()) {
-        coroutine.dispose(thread, zone, false);
-      }
+    coroutine ^= coroutines.At(index);
+    if (coroutine.is_persistent() && !coroutine.is_finished()) {
+      coroutine.recycle(zone);
+      recycled_count++;
+      continue;
+    }
+    if (coroutine.is_ephemeral() && !coroutine.is_disposed()) {
+      coroutine.dispose(thread, zone, false);
     }
   }
 
   if (recycled_count != 0) {
-    auto& recycled = Array::Handle(Array::NewUninitialized(std::max(recycled_count, (intptr_t)FLAG_coroutines_registry_initial_size)));
-    for (auto index = 0, recycled_index = 0; index < coroutines.Length(); index++) {
-      if (coroutines.At(index) != Object::null()) {
-        coroutine ^= coroutines.At(index);
-        if (coroutine.is_finished()) {
-          recycled.SetAt(recycled_index, coroutine);
-          coroutine.set_index(recycled_index);
-          recycled_index++;
-        }
+    auto& recycled = GrowableObjectArray::Handle(GrowableObjectArray::New(std::max(recycled_count, (intptr_t)FLAG_coroutines_registry_initial_capacity)));
+    for (auto index = 0; index < coroutines.Length(); index++) {
+      coroutine ^= coroutines.At(index);
+      if (coroutine.is_finished()) {
+        coroutine.set_index(recycled.Length());
+        recycled.Add(coroutine);
       }
     }
-    object_store->set_coroutines_registry(recycled);
+    thread->isolate()->set_coroutines_registry(recycled.ptr());
+    thread->ExitCoroutine();
+    return;
   }
 
-  coroutines.Truncate(0);
-  object_store->set_coroutines_registry(Array::Handle(Array::New(FLAG_coroutines_registry_initial_size)));
-
+  Array::Handle(coroutines.data()).Truncate(0);
+  thread->isolate()->set_coroutines_registry(GrowableObjectArray::New(FLAG_coroutines_registry_initial_capacity));
   thread->ExitCoroutine();
 }
 
