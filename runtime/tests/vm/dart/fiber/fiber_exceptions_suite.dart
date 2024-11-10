@@ -2,17 +2,17 @@ import 'dart:fiber';
 import 'dart:async';
 import 'package:expect/expect.dart';
 
+class FiberException implements Exception {
+  final String message;
+  const FiberException(this.message);
+}
+
 void main() {
   _run(mainException: true);
   _run(childException: true);
   _run(childException: true, mainCatchChild: true);
   _run(childYield: true);
   _run(childYield: true, mainCatchChild: true);
-}
-
-class FiberException implements Exception {
-  final String message;
-  const FiberException(this.message);
 }
 
 void _run({mainException = false, childException = false, mainCatchChild = false, childYield = false, mainYield = false}) {

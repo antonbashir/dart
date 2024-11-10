@@ -27,7 +27,13 @@ void testIdleError() {
 }
 
 void testTerminated() {
-  Fiber.launch(() => Fiber.spawn(() => Fiber.reschedule()), terminate: true);
+  final fiber = Fiber.launch(() {
+    final child = Fiber.spawn(() => Fiber.reschedule());
+    Expect.equals(child.state.kind, FiberStateKind.suspended);
+    Fiber.reschedule();
+    Expect.equals(child.state.kind, FiberStateKind.disposed);
+  }, terminate: true);
+  Expect.equals(fiber.state.kind, FiberStateKind.disposed);
 }
 
 void testFunction() {
