@@ -3809,10 +3809,10 @@ class UntaggedCoroutine : public UntaggedInstance {
   uword overflow_stack_limit() const { return overflow_stack_limit_; }
 
   uword attributes() const { return attributes_; }
-  uword index() const { return index_; }
-  
-  void set_index(uword index) { index_ = index; }
   void set_attributes(uword attributes) { attributes_ = attributes; }
+
+  uword index() const { return index_; }  
+  void set_index(uword index) { index_ = index; }
 
   bool HasStackHeadroom() {
     return OSThread::GetCurrentStackPointer() > overflow_stack_limit_;

@@ -6,13 +6,13 @@ var fibers = 100;
 var latency = 0.0;
 
 void main() {
-  Fiber.launch(benchmark, terminate: true);
+  Fiber.launch(benchmark);
 }
 
 void benchmark() {
   final jobs = <Fiber>[];
   for (var i = 0; i < fibers; i++) {
-    Fiber.schedule(Fiber.current());
+    Fiber.schedule(Fiber.current);
     jobs.add(Fiber.spawn(scheduling));
   }
   for (var i = 0; i < fibers; i++) {

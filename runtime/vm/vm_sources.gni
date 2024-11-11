@@ -401,6 +401,7 @@ vm_sources_tests = [
   "code_patcher_ia32_test.cc",
   "code_patcher_riscv_test.cc",
   "code_patcher_x64_test.cc",
+  "coroutine_test.cc",
   "compiler_test.cc",
   "cpu_test.cc",
   "cpuinfo_test.cc",

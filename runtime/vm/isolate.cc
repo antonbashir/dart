@@ -15,6 +15,7 @@
 #include "vm/class_finalizer.h"
 #include "vm/code_observers.h"
 #include "vm/compiler/jit/compiler.h"
+#include "vm/compiler/runtime_api.h"
 #include "vm/dart_api_message.h"
 #include "vm/dart_api_state.h"
 #include "vm/dart_entry.h"
@@ -108,7 +109,8 @@ DEFINE_FLAG(bool,
 // and assigned to an isolate.
 class VerifyOriginId : public IsolateVisitor {
  public:
-  explicit VerifyOriginId(Dart_Port id) : id_(id) {}
+  explicit VerifyOriginId(Dart_Port id)
+      : id_(id) {}
 
   void VisitIsolate(Isolate* isolate) { ASSERT(isolate->origin_id() != id_); }
 
@@ -489,7 +491,7 @@ void IsolateGroup::CreateHeap(bool is_vm_isolate,
                                            : FLAG_old_gen_heap_size) *
                  MBInWords);
 
-#define ISOLATE_GROUP_METRIC_CONSTRUCTORS(type, variable, name, unit)          \
+#define ISOLATE_GROUP_METRIC_CONSTRUCTORS(type, variable, name, unit) \
   metric_##variable##_.InitInstance(this, name, nullptr, Metric::unit);
   ISOLATE_GROUP_METRIC_LIST(ISOLATE_GROUP_METRIC_CONSTRUCTORS)
 #undef ISOLATE_GROUP_METRIC_CONSTRUCTORS
@@ -1599,7 +1601,7 @@ MessageHandler::MessageStatus IsolateMessageHandler::ProcessUnhandledException(
 
 void IsolateGroup::FlagsInitialize(Dart_IsolateFlags* api_flags) {
   api_flags->version = DART_FLAGS_CURRENT_VERSION;
-#define INIT_FROM_FLAG(when, name, bitname, isolate_flag, flag)                \
+#define INIT_FROM_FLAG(when, name, bitname, isolate_flag, flag) \
   api_flags->isolate_flag = flag;
   BOOL_ISOLATE_GROUP_FLAG_LIST(INIT_FROM_FLAG)
 #undef INIT_FROM_FLAG
@@ -1610,7 +1612,7 @@ void IsolateGroup::FlagsInitialize(Dart_IsolateFlags* api_flags) {
 
 void IsolateGroup::FlagsCopyTo(Dart_IsolateFlags* api_flags) {
   api_flags->version = DART_FLAGS_CURRENT_VERSION;
-#define INIT_FROM_FIELD(when, name, bitname, isolate_flag, flag)               \
+#define INIT_FROM_FIELD(when, name, bitname, isolate_flag, flag) \
   api_flags->isolate_flag = name();
   BOOL_ISOLATE_GROUP_FLAG_LIST(INIT_FROM_FIELD)
 #undef INIT_FROM_FIELD
@@ -1634,8 +1636,8 @@ void IsolateGroup::FlagsCopyFrom(const Dart_IsolateFlags& api_flags) {
 
 #define FLAG_FOR_PRODUCT(action) action
 
-#define SET_FROM_FLAG(when, name, bitname, isolate_flag, flag)                 \
-  FLAG_FOR_##when(isolate_group_flags_ = bitname##Bit::update(                 \
+#define SET_FROM_FLAG(when, name, bitname, isolate_flag, flag) \
+  FLAG_FOR_##when(isolate_group_flags_ = bitname##Bit::update( \
                       api_flags.isolate_flag, isolate_group_flags_));
 
   BOOL_ISOLATE_GROUP_FLAG_LIST(SET_FROM_FLAG)
@@ -1649,7 +1651,7 @@ void Isolate::FlagsInitialize(Dart_IsolateFlags* api_flags) {
   IsolateGroup::FlagsInitialize(api_flags);
 
   api_flags->version = DART_FLAGS_CURRENT_VERSION;
-#define INIT_FROM_FLAG(when, name, bitname, isolate_flag, flag)                \
+#define INIT_FROM_FLAG(when, name, bitname, isolate_flag, flag) \
   api_flags->isolate_flag = flag;
   BOOL_ISOLATE_FLAG_LIST(INIT_FROM_FLAG)
 #undef INIT_FROM_FLAG
@@ -1662,7 +1664,7 @@ void Isolate::FlagsCopyTo(Dart_IsolateFlags* api_flags) const {
   group()->FlagsCopyTo(api_flags);
 
   api_flags->version = DART_FLAGS_CURRENT_VERSION;
-#define INIT_FROM_FIELD(when, name, bitname, isolate_flag, flag)               \
+#define INIT_FROM_FIELD(when, name, bitname, isolate_flag, flag) \
   api_flags->isolate_flag = name();
   BOOL_ISOLATE_FLAG_LIST(INIT_FROM_FIELD)
 #undef INIT_FROM_FIELD
@@ -1686,8 +1688,8 @@ void Isolate::FlagsCopyFrom(const Dart_IsolateFlags& api_flags) {
 
 #define FLAG_FOR_PRODUCT(action) action
 
-#define SET_FROM_FLAG(when, name, bitname, isolate_flag, flag)                 \
-  FLAG_FOR_##when(isolate_flags_ = bitname##Bit::update(                       \
+#define SET_FROM_FLAG(when, name, bitname, isolate_flag, flag) \
+  FLAG_FOR_##when(isolate_flags_ = bitname##Bit::update(       \
                       api_flags.isolate_flag, isolate_flags_));
 
   BOOL_ISOLATE_FLAG_LIST(SET_FROM_FLAG)
@@ -1705,7 +1707,7 @@ void BaseIsolate::AssertCurrent(BaseIsolate* isolate) {
 #endif  // defined(DEBUG)
 
 #if defined(DEBUG)
-#define REUSABLE_HANDLE_SCOPE_INIT(object)                                     \
+#define REUSABLE_HANDLE_SCOPE_INIT(object) \
   reusable_##object##_handle_scope_active_(false),
 #else
 #define REUSABLE_HANDLE_SCOPE_INIT(object)
@@ -1741,14 +1743,16 @@ Isolate::Isolate(IsolateGroup* isolate_group,
       field_table_(new FieldTable(/*isolate=*/this)),
       finalizers_(GrowableObjectArray::null()),
       isolate_object_store_(new IsolateObjectStore()),
+      coroutines_registry_(GrowableObjectArray::null()),
       isolate_group_(isolate_group),
+      saved_coroutine_(Coroutine::null()),
       isolate_flags_(0),
 #if !defined(PRODUCT)
       last_resume_timestamp_(OS::GetCurrentTimeMillis()),
       vm_tag_counters_(),
       pending_service_extension_calls_(GrowableObjectArray::null()),
       registered_service_extension_handlers_(GrowableObjectArray::null()),
-#define ISOLATE_METRIC_CONSTRUCTORS(type, variable, name, unit)                \
+#define ISOLATE_METRIC_CONSTRUCTORS(type, variable, name, unit) \
   metric_##variable##_(),
       ISOLATE_METRIC_LIST(ISOLATE_METRIC_CONSTRUCTORS)
 #undef ISOLATE_METRIC_CONSTRUCTORS
@@ -1759,7 +1763,6 @@ Isolate::Isolate(IsolateGroup* isolate_group,
       on_cleanup_callback_(Isolate::CleanupCallback()),
       random_(),
       mutex_(NOT_IN_PRODUCT("Isolate::mutex_")),
-      saved_coroutine_(Coroutine::null()),
       tag_table_(GrowableObjectArray::null()),
       sticky_error_(Error::null()),
       spawn_count_monitor_(),
@@ -1849,8 +1852,8 @@ Isolate* Isolate::InitIsolate(const char* name_prefix,
 
 #if !defined(PRODUCT)
 // Initialize metrics.
-#define ISOLATE_METRIC_INIT(type, variable, name, unit)                        \
-  result->metric_##variable##_.InitInstance(result, name, nullptr,             \
+#define ISOLATE_METRIC_INIT(type, variable, name, unit)            \
+  result->metric_##variable##_.InitInstance(result, name, nullptr, \
                                             Metric::unit);
   ISOLATE_METRIC_LIST(ISOLATE_METRIC_INIT);
 #undef ISOLATE_METRIC_INIT
@@ -2518,11 +2521,11 @@ void Isolate::LowLevelShutdown() {
   if (FLAG_print_metrics) {
     LogBlock lb;
     OS::PrintErr("Printing metrics for %s\n", name());
-#define ISOLATE_GROUP_METRIC_PRINT(type, variable, name, unit)                 \
+#define ISOLATE_GROUP_METRIC_PRINT(type, variable, name, unit) \
   OS::PrintErr("%s\n", isolate_group_->Get##variable##Metric()->ToString());
     ISOLATE_GROUP_METRIC_LIST(ISOLATE_GROUP_METRIC_PRINT)
 #undef ISOLATE_GROUP_METRIC_PRINT
-#define ISOLATE_METRIC_PRINT(type, variable, name, unit)                       \
+#define ISOLATE_METRIC_PRINT(type, variable, name, unit) \
   OS::PrintErr("%s\n", metric_##variable##_.ToString());
     ISOLATE_METRIC_LIST(ISOLATE_METRIC_PRINT)
 #undef ISOLATE_METRIC_PRINT
@@ -2740,6 +2743,7 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&sticky_error_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&finalizers_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&saved_coroutine_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&coroutines_registry_));
 #if !defined(PRODUCT)
   visitor->VisitPointer(
       reinterpret_cast<ObjectPtr*>(&pending_service_extension_calls_));
@@ -3131,11 +3135,11 @@ void Isolate::PrintJSON(JSONStream* stream, bool ref) {
 #define TO_STRING(s) STR(s)
 #define STR(s) #s
 
-#define ADD_ISOLATE_FLAGS(when, name, bitname, isolate_flag_name, flag_name)   \
-  {                                                                            \
-    JSONObject jsflag(&jsflags);                                               \
-    jsflag.AddProperty("name", TO_STRING(name));                               \
-    jsflag.AddProperty("valueAsString", name() ? "true" : "false");            \
+#define ADD_ISOLATE_FLAGS(when, name, bitname, isolate_flag_name, flag_name) \
+  {                                                                          \
+    JSONObject jsflag(&jsflags);                                             \
+    jsflag.AddProperty("name", TO_STRING(name));                             \
+    jsflag.AddProperty("valueAsString", name() ? "true" : "false");          \
   }
     JSONArray jsflags(&jsobj, "isolateFlags");
     BOOL_ISOLATE_FLAG_LIST(ADD_ISOLATE_FLAGS)

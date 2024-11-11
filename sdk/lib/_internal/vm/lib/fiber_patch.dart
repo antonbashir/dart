@@ -25,6 +25,11 @@ class _Coroutine {
   @patch
   @pragma("vm:recognized", "other")
   @pragma("vm:prefer-inline")
+  external int get _size;
+
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
   external void Function() get _entry;
   @patch
   @pragma("vm:recognized", "other")
@@ -107,13 +112,6 @@ class _Coroutine {
 
   @patch
   @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  @pragma("vm:unsafe:no-interrupts")
-  @pragma("vm:unsafe:no-bounds-checks")
-  external static _Coroutine _at(int index);
-
-  @patch
-  @pragma("vm:recognized", "other")
   @pragma("vm:never-inline")
   @pragma("vm:unsafe:no-interrupts")
   @pragma("vm:unsafe:no-bounds-checks")
@@ -140,4 +138,12 @@ class _Coroutine {
   @pragma("vm:unsafe:no-interrupts")
   @pragma("vm:unsafe:no-bounds-checks")
   external static _Coroutine? get _current;
+
+  @patch
+  @pragma("vm:recognized", "other")
+  @pragma("vm:prefer-inline")
+  @pragma("vm:idempotent")
+  @pragma("vm:unsafe:no-interrupts")
+  @pragma("vm:unsafe:no-bounds-checks")
+  external static List<_Coroutine> get _registry;
 }

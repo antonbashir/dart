@@ -1161,10 +1161,11 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kCoroutineInitialize:
     case MethodRecognizer::kCoroutineTransfer:
     case MethodRecognizer::kCoroutine_getCurrent:
-    case MethodRecognizer::kCoroutine_atIndex:
+    case MethodRecognizer::kCoroutine_getRegistry:
     case MethodRecognizer::kCoroutine_getAttributes:
     case MethodRecognizer::kCoroutine_setAttributes:
     case MethodRecognizer::kCoroutine_getIndex:
+    case MethodRecognizer::kCoroutine_getSize:
       return true;
     default:
       return false;
@@ -1962,11 +1963,9 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
       body += LoadNativeField(Slot::Thread_coroutine());
       break;
     }
-    case MethodRecognizer::kCoroutine_atIndex: {
-      body += LoadIsolateObjectStore();
-      body += LoadNativeField(Slot::IsolateObjectStore_coroutines_registry());
-      body += LoadLocal(parsed_function_->RawParameterVariable(0));
-      body += LoadIndexed(kArrayCid);
+    case MethodRecognizer::kCoroutine_getRegistry: {
+      body += LoadIsolate();
+      body += LoadNativeField(Slot::Isolate_coroutines_registry());
       break;
     }
     case MethodRecognizer::kCoroutine_getIndex: {
@@ -1978,6 +1977,12 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
     case MethodRecognizer::kCoroutine_getAttributes: {
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
       body += LoadNativeField(Slot::Coroutine_attributes());
+      body += Box(kUnboxedInt64);
+      break;
+    }
+    case MethodRecognizer::kCoroutine_getSize: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += LoadNativeField(Slot::Coroutine_stack_size());
       body += Box(kUnboxedInt64);
       break;
     }
@@ -4706,13 +4711,6 @@ Fragment FlowGraphBuilder::LoadObjectStore() {
   Fragment body;
   body += LoadIsolateGroup();
   body += LoadNativeField(Slot::IsolateGroup_object_store());
-  return body;
-}
-
-Fragment FlowGraphBuilder::LoadIsolateObjectStore() {
-  Fragment body;
-  body += LoadIsolate();
-  body += LoadNativeField(Slot::Isolate_isolate_object_store());
   return body;
 }
 

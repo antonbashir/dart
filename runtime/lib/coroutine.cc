@@ -14,3 +14,4 @@ DEFINE_NATIVE_ENTRY(Coroutine_factory, 0, 3) {
   return Coroutine::New(size.Value(), trampoline.function());
 }
 }  // namespace dart
+ 

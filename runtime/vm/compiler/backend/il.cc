@@ -8607,6 +8607,16 @@ void CoroutineTransferInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
 #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
   SPILLS_LR_TO_FRAME({});
 #endif
+  __ LoadFieldFromOffset(TMP, kFromCoroutine, Coroutine::attributes_offset());
+  __ AndImmediate(TMP, ~Coroutine::CoroutineAttributes::running);
+  __ OrImmediate(TMP, Coroutine::CoroutineAttributes::suspended);
+  __ StoreFieldToOffset(TMP, kFromCoroutine, Coroutine::attributes_offset());
+
+  __ LoadFieldFromOffset(TMP, kToCoroutine, Coroutine::attributes_offset());
+  __ AndImmediate(TMP, ~Coroutine::CoroutineAttributes::suspended);
+  __ OrImmediate(TMP, Coroutine::CoroutineAttributes::running);
+  __ StoreFieldToOffset(TMP, kToCoroutine, Coroutine::attributes_offset());
+
   __ PushRegister(FPREG);
   __ StoreFieldToOffset(SPREG, kFromCoroutine, Coroutine::stack_base_offset());
 

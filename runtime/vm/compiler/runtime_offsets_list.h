@@ -170,14 +170,13 @@
   FIELD(Isolate, current_tag_offset)                                           \
   FIELD(Isolate, default_tag_offset)                                           \
   FIELD(Isolate, finalizers_offset)                                            \
-  FIELD(Isolate, isolate_object_store_offset)                                  \
+  FIELD(Isolate, coroutines_registry_offset)                                   \
   NOT_IN_PRODUCT(FIELD(Isolate, has_resumption_breakpoints_offset))            \
   FIELD(IsolateGroup, object_store_offset)                                     \
   FIELD(IsolateGroup, class_table_offset)                                      \
   FIELD(IsolateGroup, cached_class_table_table_offset)                         \
   NOT_IN_PRODUCT(FIELD(Isolate, single_step_offset))                           \
   FIELD(Isolate, user_tag_offset)                                              \
-  FIELD(IsolateObjectStore, coroutines_registry_offset)                        \
   FIELD(LinkedHashBase, data_offset)                                           \
   FIELD(ImmutableLinkedHashBase, data_offset)                                  \
   FIELD(LinkedHashBase, deleted_keys_offset)                                   \

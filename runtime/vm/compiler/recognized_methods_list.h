@@ -389,6 +389,7 @@ namespace dart {
   V(_Coroutine, get:_entry, Coroutine_getEntry, 0xc825e938)                    \
   V(_Coroutine, get:_trampoline, Coroutine_getTrampoline, 0xc5b7b65a)          \
   V(_Coroutine, get:_argument, Coroutine_getArgument, 0xd8767529)              \
+  V(_Coroutine, get:_size, Coroutine_getSize, 0x75030c2a)                      \
   V(_Coroutine, get:_attributes, Coroutine_getAttributes, 0x4bba9d49)          \
   V(_Coroutine, get:_caller, Coroutine_getCaller, 0x786ccafc)                  \
   V(_Coroutine, get:_scheduler, Coroutine_getScheduler, 0x6ad5213d)            \
@@ -408,7 +409,7 @@ namespace dart {
   V(_Coroutine, set:_toProcessorPrevious, Coroutine_setToProcessorPrevious,    \
   0x9b4aa9a6)                                                                  \
   V(_Coroutine, get:_current, Coroutine_getCurrent, 0xc8452bde)                \
-  V(_Coroutine, _at, Coroutine_atIndex, 0x28bab05c)                            \
+  V(_Coroutine, get:_registry, Coroutine_getRegistry, 0xa2d4414e)              \
 
 
 // List of intrinsics:

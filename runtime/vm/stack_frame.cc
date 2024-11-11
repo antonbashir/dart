@@ -654,8 +654,8 @@ void StackFrameIterator::FrameSetIterator::Unpoison() {
 StackFrame* StackFrameIterator::FrameSetIterator::NextFrame(bool validate) {
   StackFrame* frame;
   ASSERT(HasNext());
-  if (stack_owner_ == kStackOwnerCoroutine && StubCode::InCoroutineStub(pc_)) {
-    frame = &stack_frame_;
+  frame = &stack_frame_;
+  if (stack_owner_ == kStackOwnerCoroutine && StubCode::InCoroutineStub(frame->pc())) {
     frame->sp_ = sp_;
     frame->fp_ = fp_;
     frame->pc_ = pc_;
@@ -665,7 +665,6 @@ StackFrame* StackFrameIterator::FrameSetIterator::NextFrame(bool validate) {
     Unpoison();
     return NextFrame(validate);
   }
-  frame = &stack_frame_;
   frame->sp_ = sp_;
   frame->fp_ = fp_;
   frame->pc_ = pc_;
