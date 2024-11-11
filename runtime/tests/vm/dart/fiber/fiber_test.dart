@@ -6,10 +6,12 @@ import 'fiber_launch_suite.dart' as launch;
 import 'fiber_captures_suite.dart' as captures;
 import 'fiber_flow_suite.dart' as flow;
 import 'fiber_exceptions_suite.dart' as exceptions;
+import 'fiber_state_suite.dart' as state;
 
 final suites = {
   "launch": launch.tests,
-  "state": captures.tests,
+  "state": state.tests,
+  "captures": captures.tests,
   "lifecycle": lifecycle.tests,
   "flow": flow.tests,
   "exceptions": exceptions.tests,
@@ -34,7 +36,7 @@ void main(List<String> arguments) {
   print("Processing suite: ${arguments[0]}");
   for (var test in suite!) {
     final function = RegExp(r"Function 'test(.+)'").firstMatch(test.toString())!.group(1);
-    if (arguments.length == 1 || function == arguments[1].toLowerCase()) {
+    if (arguments.length == 2 || function == arguments[1].toLowerCase()) {
       print("Processing test: test${function}");
       test();
       print("Test: test${function} finished");

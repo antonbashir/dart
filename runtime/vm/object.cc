@@ -9205,7 +9205,7 @@ bool Function::RecognizedKindForceOptimize() const {
     case MethodRecognizer::kTypedData_memMove8:
     case MethodRecognizer::kTypedData_memMove16:
     case MethodRecognizer::kCoroutine_getCurrent:
-    case MethodRecognizer::kCoroutine_atIndex:
+    case MethodRecognizer::kCoroutine_getRegistry:
     case MethodRecognizer::kCoroutine_getAttributes:
     case MethodRecognizer::kCoroutine_getIndex:
     case MethodRecognizer::kCoroutine_getSize:

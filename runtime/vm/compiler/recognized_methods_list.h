@@ -409,7 +409,7 @@ namespace dart {
   V(_Coroutine, set:_toProcessorPrevious, Coroutine_setToProcessorPrevious,    \
   0x9b4aa9a6)                                                                  \
   V(_Coroutine, get:_current, Coroutine_getCurrent, 0xc8452bde)                \
-  V(_Coroutine, _at, Coroutine_atIndex, 0x28bab05c)                            \
+  V(_Coroutine, get:_registry, Coroutine_getRegistry, 0xa2d4414e)              \
 
 
 // List of intrinsics:

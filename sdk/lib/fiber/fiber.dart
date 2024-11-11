@@ -16,14 +16,7 @@ const _kFiberFinished = 1 << 3;
 const _kFiberDisposed = 1 << 4;
 const _kFiberPersistent = 1 << 5;
 
-enum FiberStateKind {
-  created,
-  running,
-  suspended,
-  finished,
-  disposed,
-  unknown
-}
+enum FiberStateKind { created, running, suspended, finished, disposed, unknown }
 
 extension type FiberState(int _state) {
   @pragma("vm:prefer-inline")
@@ -88,6 +81,11 @@ extension type FiberArgument(Object? _argument) {
 
   @pragma("vm:prefer-inline")
   Map? get asMap => _argument == null ? {} : _argument as Map;
+}
+
+extension type FiberRegistry(List<_Coroutine> _registry) {
+  @pragma("vm:prefer-inline")
+  int get length => _registry.length;
 }
 
 extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
@@ -166,6 +164,9 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   }
 
   @pragma("vm:prefer-inline")
+  static FiberRegistry get registry => FiberRegistry(_Coroutine._registry);
+
+  @pragma("vm:prefer-inline")
   static void schedule(Fiber fiber) {
     assert(fiber.state.suspended || fiber.state.running);
     Fiber.current._processor._schedule(fiber);
@@ -182,9 +183,6 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
     Fiber.current._processor._stop();
     Fiber.suspend();
   }
-
-  @pragma("vm:prefer-inline")
-  static Fiber at(int index) => Fiber(_Coroutine._at(index));
 
   @pragma("vm:prefer-inline")
   int get index => _coroutine._index;
@@ -247,7 +245,7 @@ class _Coroutine {
 
   external static _Coroutine? get _current;
 
-  external static _Coroutine _at(int index);
+  external static List<_Coroutine> get _registry;
 
   external static void _initialize(_Coroutine root);
 

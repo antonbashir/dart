@@ -1,5 +1,4 @@
 import 'dart:fiber';
-import 'dart:async';
 import 'package:expect/expect.dart';
 
 final tests = [
@@ -9,19 +8,12 @@ final tests = [
   testInvariant,
 ];
 
-
 void testRegistry() {
-
+  Fiber.launch(() => Expect.equals(2, Fiber.registry.length));
 }
 
-void testStateLink() {
+void testStateLink() {}
 
-}
+void testProcessor() {}
 
-void testProcessor() {
-
-}
-
-void testInvariant() {
-
-}
+void testInvariant() {}

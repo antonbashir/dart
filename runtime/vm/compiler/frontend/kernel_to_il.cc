@@ -1161,7 +1161,7 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kCoroutineInitialize:
     case MethodRecognizer::kCoroutineTransfer:
     case MethodRecognizer::kCoroutine_getCurrent:
-    case MethodRecognizer::kCoroutine_atIndex:
+    case MethodRecognizer::kCoroutine_getRegistry:
     case MethodRecognizer::kCoroutine_getAttributes:
     case MethodRecognizer::kCoroutine_setAttributes:
     case MethodRecognizer::kCoroutine_getIndex:
@@ -1963,11 +1963,9 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
       body += LoadNativeField(Slot::Thread_coroutine());
       break;
     }
-    case MethodRecognizer::kCoroutine_atIndex: {
+    case MethodRecognizer::kCoroutine_getRegistry: {
       body += LoadIsolate();
       body += LoadNativeField(Slot::Isolate_coroutines_registry());
-      body += LoadLocal(parsed_function_->RawParameterVariable(0));
-      body += LoadIndexed(kArrayCid);
       break;
     }
     case MethodRecognizer::kCoroutine_getIndex: {

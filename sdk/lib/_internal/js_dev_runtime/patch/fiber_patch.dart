@@ -52,7 +52,7 @@ class _Coroutine {
   @patch
   static _Coroutine? get _current => throw UnsupportedError("_Coroutine._current");
   @patch
-  static _Coroutine _at(int index) => throw UnsupportedError("_Coroutine._initialize");
+  static List<_Coroutine> get _registry => throw UnsupportedError("_Coroutine._current");
   @patch
   static void _initialize(_Coroutine root) => throw UnsupportedError("_Coroutine._initialize");
   @patch
