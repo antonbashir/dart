@@ -179,12 +179,6 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   }
 
   @pragma("vm:prefer-inline")
-  static void terminate() {
-    Fiber.current._processor._stop();
-    Fiber.suspend();
-  }
-
-  @pragma("vm:prefer-inline")
   int get index => _coroutine._index;
 
   @pragma("vm:prefer-inline")

@@ -76,7 +76,7 @@ class _FiberProcessor {
   static void _main() {
     final processor = Fiber.current._processor;
     processor._entry();
-    if (processor._idle == null && processor._running) Fiber.terminate();
+    processor._running = processor._idle != null;
   }
 
   @pragma("vm:never-inline")
@@ -85,7 +85,7 @@ class _FiberProcessor {
     final processor = scheduler._processor;
     final scheduled = processor._scheduled;
     Fiber.fork(Fiber(scheduled._removeHead()._coroutine));
-    if (scheduled._isEmpty || !processor._running) return;
+    if (scheduled._isEmpty) return;
     for (;;) {
       var last = Fiber(scheduled._removeHead()._coroutine);
       var first = last;
@@ -95,7 +95,7 @@ class _FiberProcessor {
       }
       last._caller = scheduler;
       _Coroutine._transfer(scheduler, first);
-      if (!processor._running || scheduled._isEmpty) return;
+      if (scheduled._isEmpty) return;
     }
   }
 
@@ -106,7 +106,10 @@ class _FiberProcessor {
     final scheduled = processor._scheduled;
     final idle = processor._idle!;
     Fiber.fork(Fiber(scheduled._removeHead()._coroutine));
-    if (scheduled._isEmpty || !processor._running) return;
+    if (scheduled._isEmpty) {
+      idle();
+      if (scheduled._isEmpty) throw StateError("There are no scheduled fibers after idle");
+    }
     for (;;) {
       var last = Fiber(scheduled._removeHead()._coroutine);
       var first = last;
@@ -116,17 +119,12 @@ class _FiberProcessor {
       }
       last._caller = scheduler;
       _Coroutine._transfer(scheduler, first);
-      if (!processor._running) return;
       if (scheduled._isEmpty) {
         idle();
-        if (!processor._running) return;
         if (scheduled._isEmpty) throw StateError("There are no scheduled fibers after idle");
       }
     }
   }
-
-  @pragma("vm:prefer-inline")
-  void _stop() => _running = false;
 
   @pragma("vm:prefer-inline")
   void _schedule(Fiber fiber) => _scheduled._stealTail(_FiberProcessorLink(fiber._coroutine));

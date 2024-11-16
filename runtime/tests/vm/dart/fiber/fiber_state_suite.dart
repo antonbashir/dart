@@ -3,9 +3,7 @@ import 'package:expect/expect.dart';
 
 final tests = [
   testRegistry,
-  testStateLink,
   testProcessor,
-  testInvariant,
 ];
 
 void testRegistry() {
@@ -38,8 +36,18 @@ void testRegistry() {
   });
 }
 
-void testStateLink() {}
+void testProcessor() {
+  var state = false;
+  Fiber.launch(() => state = true);
+  Expect.isTrue(state);
 
-void testProcessor() {}
-
-void testInvariant() {}
+  Expect.throws<StateError>(
+    () {
+      Fiber.launch(
+        () => Fiber.spawn(() => Fiber.suspend()),
+        idle: () {},
+      );
+    },
+    (error) => error.message == "There are no scheduled fibers after idle",
+  );
+}
