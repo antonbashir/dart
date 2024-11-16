@@ -36,7 +36,7 @@ void main(List<String> arguments) {
   print("Processing suite: ${arguments[0]}");
   for (var test in suite!) {
     final function = RegExp(r"Function 'test(.+)'").firstMatch(test.toString())!.group(1);
-    if (arguments.length == 2 || function == arguments[1].toLowerCase()) {
+    if (arguments.length == 1 || function!.toLowerCase() == arguments[1].toLowerCase()) {
       print("Processing test: test${function}");
       test();
       print("Test: test${function} finished");
