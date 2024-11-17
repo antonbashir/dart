@@ -116,6 +116,16 @@ class StackFrame : public ValueObject {
 
   uword GetCallerSp() const { return fp() + (kCallerSpSlotFromFp * kWordSize); }
 
+  uword GetCallerPc() const {
+    uword raw_pc = *(reinterpret_cast<uword*>(
+        fp() + (kSavedCallerPcSlotFromFp * kWordSize)));
+    ASSERT(raw_pc != StubCode::DeoptimizeLazyFromThrow().EntryPoint());
+    if (raw_pc == StubCode::DeoptimizeLazyFromReturn().EntryPoint()) {
+      return thread_->pending_deopts().FindPendingDeopt(GetCallerFp());
+    }
+    return raw_pc;
+  }
+
  protected:
   explicit StackFrame(Thread* thread)
       : fp_(0), sp_(0), pc_(0), thread_(thread) {}
@@ -138,16 +148,6 @@ class StackFrame : public ValueObject {
   uword GetCallerFp() const {
     return *(reinterpret_cast<uword*>(fp() +
                                       (kSavedCallerFpSlotFromFp * kWordSize)));
-  }
-
-  uword GetCallerPc() const {
-    uword raw_pc = *(reinterpret_cast<uword*>(
-        fp() + (kSavedCallerPcSlotFromFp * kWordSize)));
-    ASSERT(raw_pc != StubCode::DeoptimizeLazyFromThrow().EntryPoint());
-    if (raw_pc == StubCode::DeoptimizeLazyFromReturn().EntryPoint()) {
-      return thread_->pending_deopts().FindPendingDeopt(GetCallerFp());
-    }
-    return raw_pc;
   }
 
   uword fp_;

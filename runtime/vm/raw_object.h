@@ -14,7 +14,6 @@
 #include "vm/class_id.h"
 #include "vm/compiler/method_recognizer.h"
 #include "vm/compiler/runtime_api.h"
-#include "vm/coroutine.h"
 #include "vm/exceptions.h"
 #include "vm/globals.h"
 #include "vm/pointer_tagging.h"
@@ -47,24 +46,24 @@ CLASS_LIST(DEFINE_FORWARD_DECLARATION)
 class CodeStatistics;
 class StackFrame;
 
-#define DEFINE_CONTAINS_COMPRESSED(type)                                       \
-  static constexpr bool kContainsCompressedPointers =                          \
+#define DEFINE_CONTAINS_COMPRESSED(type)              \
+  static constexpr bool kContainsCompressedPointers = \
       is_compressed_ptr<type>::value;
 
-#define CHECK_CONTAIN_COMPRESSED(type)                                         \
-  static_assert(                                                               \
-      kContainsCompressedPointers || is_uncompressed_ptr<type>::value,         \
-      "From declaration uses ObjectPtr");                                      \
-  static_assert(                                                               \
-      !kContainsCompressedPointers || is_compressed_ptr<type>::value,          \
+#define CHECK_CONTAIN_COMPRESSED(type)                                 \
+  static_assert(                                                       \
+      kContainsCompressedPointers || is_uncompressed_ptr<type>::value, \
+      "From declaration uses ObjectPtr");                              \
+  static_assert(                                                       \
+      !kContainsCompressedPointers || is_compressed_ptr<type>::value,  \
       "From declaration uses CompressedObjectPtr");
 
-#define VISIT_FROM(first)                                                      \
-  DEFINE_CONTAINS_COMPRESSED(decltype(first##_))                               \
-  static constexpr bool kContainsPointerFields = true;                         \
-  base_ptr_type<decltype(first##_)>::type* from() {                            \
-    return reinterpret_cast<base_ptr_type<decltype(first##_)>::type*>(         \
-        &first##_);                                                            \
+#define VISIT_FROM(first)                                              \
+  DEFINE_CONTAINS_COMPRESSED(decltype(first##_))                       \
+  static constexpr bool kContainsPointerFields = true;                 \
+  base_ptr_type<decltype(first##_)>::type* from() {                    \
+    return reinterpret_cast<base_ptr_type<decltype(first##_)>::type*>( \
+        &first##_);                                                    \
   }
 
 #define VISIT_FROM_PAYLOAD_START(elem_type)                                    \
@@ -79,13 +78,13 @@ class StackFrame;
     return reinterpret_cast<base_ptr_type<elem_type>::type*>(payload_start);   \
   }
 
-#define VISIT_TO(last)                                                         \
-  CHECK_CONTAIN_COMPRESSED(decltype(last##_));                                 \
-  static_assert(kContainsPointerFields,                                        \
-                "Must have a corresponding VISIT_FROM");                       \
-  base_ptr_type<decltype(last##_)>::type* to(intptr_t length = 0) {            \
-    return reinterpret_cast<base_ptr_type<decltype(last##_)>::type*>(          \
-        &last##_);                                                             \
+#define VISIT_TO(last)                                                \
+  CHECK_CONTAIN_COMPRESSED(decltype(last##_));                        \
+  static_assert(kContainsPointerFields,                               \
+                "Must have a corresponding VISIT_FROM");              \
+  base_ptr_type<decltype(last##_)>::type* to(intptr_t length = 0) {   \
+    return reinterpret_cast<base_ptr_type<decltype(last##_)>::type*>( \
+        &last##_);                                                    \
   }
 
 #define VISIT_TO_PAYLOAD_END(elem_type)                                        \
@@ -106,12 +105,12 @@ class StackFrame;
 #define VISIT_NOTHING() int NothingToVisit();
 
 #if defined(DART_COMPRESSED_POINTERS)
-#define ASSERT_UNCOMPRESSED(Type)                                              \
-  static_assert(!Untagged##Type::kContainsCompressedPointers,                  \
+#define ASSERT_UNCOMPRESSED(Type)                             \
+  static_assert(!Untagged##Type::kContainsCompressedPointers, \
                 "Should contain compressed pointers");
 
-#define ASSERT_COMPRESSED(Type)                                                \
-  static_assert(Untagged##Type::kContainsCompressedPointers,                   \
+#define ASSERT_COMPRESSED(Type)                              \
+  static_assert(Untagged##Type::kContainsCompressedPointers, \
                 "Should not contain compressed pointers");
 #else
 // Do no checks if there are no compressed pointers.
@@ -119,7 +118,7 @@ class StackFrame;
 #define ASSERT_COMPRESSED(Type)
 #endif
 
-#define ASSERT_NOTHING_TO_VISIT(Type)                                          \
+#define ASSERT_NOTHING_TO_VISIT(Type) \
   ASSERT(SIZE_OF_RETURNED_VALUE(Untagged##Type, NothingToVisit) == sizeof(int))
 
 enum TypedDataElementType {
@@ -128,30 +127,30 @@ enum TypedDataElementType {
 #undef V
 };
 
-#define VISITOR_SUPPORT(object)                                                \
-  static intptr_t Visit##object##Pointers(object##Ptr raw_obj,                 \
+#define VISITOR_SUPPORT(object)                                \
+  static intptr_t Visit##object##Pointers(object##Ptr raw_obj, \
                                           ObjectPointerVisitor* visitor);
 
-#define RAW_OBJECT_IMPLEMENTATION(object)                                      \
- private: /* NOLINT */                                                         \
-  VISITOR_SUPPORT(object)                                                      \
-  friend class object;                                                         \
-  friend class UntaggedObject;                                                 \
-  friend class OffsetsTable;                                                   \
-  DISALLOW_ALLOCATION();                                                       \
+#define RAW_OBJECT_IMPLEMENTATION(object) \
+ private: /* NOLINT */                    \
+  VISITOR_SUPPORT(object)                 \
+  friend class object;                    \
+  friend class UntaggedObject;            \
+  friend class OffsetsTable;              \
+  DISALLOW_ALLOCATION();                  \
   DISALLOW_IMPLICIT_CONSTRUCTORS(Untagged##object)
 
-#define RAW_HEAP_OBJECT_IMPLEMENTATION(object)                                 \
- private:                                                                      \
-  RAW_OBJECT_IMPLEMENTATION(object);                                           \
-  friend class object##SerializationCluster;                                   \
-  friend class object##DeserializationCluster;                                 \
-  friend class object##MessageSerializationCluster;                            \
-  friend class object##MessageDeserializationCluster;                          \
-  friend class Serializer;                                                     \
-  friend class Deserializer;                                                   \
-  template <typename Base>                                                     \
-  friend class ObjectCopy;                                                     \
+#define RAW_HEAP_OBJECT_IMPLEMENTATION(object)        \
+ private:                                             \
+  RAW_OBJECT_IMPLEMENTATION(object);                  \
+  friend class object##SerializationCluster;          \
+  friend class object##DeserializationCluster;        \
+  friend class object##MessageSerializationCluster;   \
+  friend class object##MessageDeserializationCluster; \
+  friend class Serializer;                            \
+  friend class Deserializer;                          \
+  template <typename Base>                            \
+  friend class ObjectCopy;                            \
   friend class Pass2Visitor;
 
 // UntaggedObject is the base class of all raw objects; even though it carries
@@ -843,7 +842,7 @@ class UntaggedObject {
   friend class Object;
   friend uword TagsFromUntaggedObject(UntaggedObject*);                // tags_
   friend void SetNewSpaceTaggingWord(ObjectPtr, classid_t, uint32_t);  // tags_
-  friend class ObjectCopyBase;  // LoadPointer/StorePointer
+  friend class ObjectCopyBase;                                         // LoadPointer/StorePointer
   friend void ReportImpossibleNullError(intptr_t cid,
                                         StackFrame* caller_frame,
                                         Thread* thread);
@@ -887,147 +886,147 @@ inline intptr_t ObjectPtr::GetClassId() const {
   return untag()->GetClassId();
 }
 
-#define POINTER_FIELD(type, name)                                              \
- public:                                                                       \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  type name() const {                                                          \
-    return LoadPointer<type, order>(&name##_);                                 \
-  }                                                                            \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  void set_##name(type value) {                                                \
-    StorePointer<type, order>(&name##_, value);                                \
-  }                                                                            \
-                                                                               \
- protected:                                                                    \
+#define POINTER_FIELD(type, name)                                \
+ public:                                                         \
+  template <std::memory_order order = std::memory_order_relaxed> \
+  type name() const {                                            \
+    return LoadPointer<type, order>(&name##_);                   \
+  }                                                              \
+  template <std::memory_order order = std::memory_order_relaxed> \
+  void set_##name(type value) {                                  \
+    StorePointer<type, order>(&name##_, value);                  \
+  }                                                              \
+                                                                 \
+ protected:                                                      \
   type name##_;
 
-#define COMPRESSED_POINTER_FIELD(type, name)                                   \
- public:                                                                       \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  type name() const {                                                          \
-    return LoadCompressedPointer<type, Compressed##type, order>(&name##_);     \
-  }                                                                            \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  void set_##name(type value) {                                                \
-    StoreCompressedPointer<type, Compressed##type, order>(&name##_, value);    \
-  }                                                                            \
-                                                                               \
- protected:                                                                    \
+#define COMPRESSED_POINTER_FIELD(type, name)                                \
+ public:                                                                    \
+  template <std::memory_order order = std::memory_order_relaxed>            \
+  type name() const {                                                       \
+    return LoadCompressedPointer<type, Compressed##type, order>(&name##_);  \
+  }                                                                         \
+  template <std::memory_order order = std::memory_order_relaxed>            \
+  void set_##name(type value) {                                             \
+    StoreCompressedPointer<type, Compressed##type, order>(&name##_, value); \
+  }                                                                         \
+                                                                            \
+ protected:                                                                 \
   Compressed##type name##_;
 
-#define ARRAY_POINTER_FIELD(type, name)                                        \
- public:                                                                       \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  type name() const {                                                          \
-    return LoadPointer<type, order>(&name##_);                                 \
-  }                                                                            \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  void set_##name(type value) {                                                \
-    StoreArrayPointer<type, order>(&name##_, value);                           \
-  }                                                                            \
-                                                                               \
- protected:                                                                    \
+#define ARRAY_POINTER_FIELD(type, name)                          \
+ public:                                                         \
+  template <std::memory_order order = std::memory_order_relaxed> \
+  type name() const {                                            \
+    return LoadPointer<type, order>(&name##_);                   \
+  }                                                              \
+  template <std::memory_order order = std::memory_order_relaxed> \
+  void set_##name(type value) {                                  \
+    StoreArrayPointer<type, order>(&name##_, value);             \
+  }                                                              \
+                                                                 \
+ protected:                                                      \
   type name##_;
 
-#define COMPRESSED_ARRAY_POINTER_FIELD(type, name)                             \
- public:                                                                       \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  type name() const {                                                          \
-    return LoadPointer<Compressed##type, order>(&name##_).Decompress(          \
-        heap_base());                                                          \
-  }                                                                            \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  void set_##name(type value) {                                                \
-    StoreCompressedArrayPointer<type, Compressed##type, order>(&name##_,       \
-                                                               value);         \
-  }                                                                            \
-                                                                               \
- protected:                                                                    \
+#define COMPRESSED_ARRAY_POINTER_FIELD(type, name)                       \
+ public:                                                                 \
+  template <std::memory_order order = std::memory_order_relaxed>         \
+  type name() const {                                                    \
+    return LoadPointer<Compressed##type, order>(&name##_).Decompress(    \
+        heap_base());                                                    \
+  }                                                                      \
+  template <std::memory_order order = std::memory_order_relaxed>         \
+  void set_##name(type value) {                                          \
+    StoreCompressedArrayPointer<type, Compressed##type, order>(&name##_, \
+                                                               value);   \
+  }                                                                      \
+                                                                         \
+ protected:                                                              \
   Compressed##type name##_;
 
-#define VARIABLE_POINTER_FIELDS(type, accessor_name, array_name)               \
- public:                                                                       \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  type accessor_name(intptr_t index) const {                                   \
-    return LoadPointer<type, order>(&array_name()[index]);                     \
-  }                                                                            \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  void set_##accessor_name(intptr_t index, type value) {                       \
-    StoreArrayPointer<type, order>(&array_name()[index], value);               \
-  }                                                                            \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  void set_##accessor_name(intptr_t index, type value, Thread* thread) {       \
-    StoreArrayPointer<type, order>(&array_name()[index], value, thread);       \
-  }                                                                            \
-                                                                               \
- protected:                                                                    \
-  type* array_name() {                                                         \
-    OPEN_ARRAY_START(type, type);                                              \
-  }                                                                            \
-  type const* array_name() const {                                             \
-    OPEN_ARRAY_START(type, type);                                              \
-  }                                                                            \
+#define VARIABLE_POINTER_FIELDS(type, accessor_name, array_name)         \
+ public:                                                                 \
+  template <std::memory_order order = std::memory_order_relaxed>         \
+  type accessor_name(intptr_t index) const {                             \
+    return LoadPointer<type, order>(&array_name()[index]);               \
+  }                                                                      \
+  template <std::memory_order order = std::memory_order_relaxed>         \
+  void set_##accessor_name(intptr_t index, type value) {                 \
+    StoreArrayPointer<type, order>(&array_name()[index], value);         \
+  }                                                                      \
+  template <std::memory_order order = std::memory_order_relaxed>         \
+  void set_##accessor_name(intptr_t index, type value, Thread* thread) { \
+    StoreArrayPointer<type, order>(&array_name()[index], value, thread); \
+  }                                                                      \
+                                                                         \
+ protected:                                                              \
+  type* array_name() {                                                   \
+    OPEN_ARRAY_START(type, type);                                        \
+  }                                                                      \
+  type const* array_name() const {                                       \
+    OPEN_ARRAY_START(type, type);                                        \
+  }                                                                      \
   VISIT_TO_PAYLOAD_END(type)
 
-#define COMPRESSED_VARIABLE_POINTER_FIELDS(type, accessor_name, array_name)    \
- public:                                                                       \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  type accessor_name(intptr_t index) const {                                   \
-    return LoadCompressedPointer<type, Compressed##type, order>(               \
-        &array_name()[index]);                                                 \
-  }                                                                            \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  void set_##accessor_name(intptr_t index, type value) {                       \
-    StoreCompressedArrayPointer<type, Compressed##type, order>(                \
-        &array_name()[index], value);                                          \
-  }                                                                            \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  void set_##accessor_name(intptr_t index, type value, Thread* thread) {       \
-    StoreCompressedArrayPointer<type, Compressed##type, order>(                \
-        &array_name()[index], value, thread);                                  \
-  }                                                                            \
-                                                                               \
- protected:                                                                    \
-  Compressed##type* array_name() {                                             \
-    OPEN_ARRAY_START(Compressed##type, Compressed##type);                      \
-  }                                                                            \
-  Compressed##type const* array_name() const {                                 \
-    OPEN_ARRAY_START(Compressed##type, Compressed##type);                      \
-  }                                                                            \
+#define COMPRESSED_VARIABLE_POINTER_FIELDS(type, accessor_name, array_name) \
+ public:                                                                    \
+  template <std::memory_order order = std::memory_order_relaxed>            \
+  type accessor_name(intptr_t index) const {                                \
+    return LoadCompressedPointer<type, Compressed##type, order>(            \
+        &array_name()[index]);                                              \
+  }                                                                         \
+  template <std::memory_order order = std::memory_order_relaxed>            \
+  void set_##accessor_name(intptr_t index, type value) {                    \
+    StoreCompressedArrayPointer<type, Compressed##type, order>(             \
+        &array_name()[index], value);                                       \
+  }                                                                         \
+  template <std::memory_order order = std::memory_order_relaxed>            \
+  void set_##accessor_name(intptr_t index, type value, Thread* thread) {    \
+    StoreCompressedArrayPointer<type, Compressed##type, order>(             \
+        &array_name()[index], value, thread);                               \
+  }                                                                         \
+                                                                            \
+ protected:                                                                 \
+  Compressed##type* array_name() {                                          \
+    OPEN_ARRAY_START(Compressed##type, Compressed##type);                   \
+  }                                                                         \
+  Compressed##type const* array_name() const {                              \
+    OPEN_ARRAY_START(Compressed##type, Compressed##type);                   \
+  }                                                                         \
   VISIT_TO_PAYLOAD_END(Compressed##type)
 
-#define SMI_FIELD(type, name)                                                  \
- public:                                                                       \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  type name() const {                                                          \
-    type result = LoadSmi<order>(&name##_);                                    \
-    ASSERT(!result.IsHeapObject());                                            \
-    return result;                                                             \
-  }                                                                            \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  void set_##name(type value) {                                                \
-    ASSERT(!value.IsHeapObject());                                             \
-    StoreSmi<type, order>(&name##_, value);                                    \
-  }                                                                            \
-                                                                               \
- protected:                                                                    \
+#define SMI_FIELD(type, name)                                    \
+ public:                                                         \
+  template <std::memory_order order = std::memory_order_relaxed> \
+  type name() const {                                            \
+    type result = LoadSmi<order>(&name##_);                      \
+    ASSERT(!result.IsHeapObject());                              \
+    return result;                                               \
+  }                                                              \
+  template <std::memory_order order = std::memory_order_relaxed> \
+  void set_##name(type value) {                                  \
+    ASSERT(!value.IsHeapObject());                               \
+    StoreSmi<type, order>(&name##_, value);                      \
+  }                                                              \
+                                                                 \
+ protected:                                                      \
   type name##_;
 
-#define COMPRESSED_SMI_FIELD(type, name)                                       \
- public:                                                                       \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  type name() const {                                                          \
-    type result = LoadCompressedSmi<order>(&name##_);                          \
-    ASSERT(!result.IsHeapObject());                                            \
-    return result;                                                             \
-  }                                                                            \
-  template <std::memory_order order = std::memory_order_relaxed>               \
-  void set_##name(type value) {                                                \
-    ASSERT(!value.IsHeapObject());                                             \
-    StoreCompressedSmi(&name##_, value);                                       \
-  }                                                                            \
-                                                                               \
- protected:                                                                    \
+#define COMPRESSED_SMI_FIELD(type, name)                         \
+ public:                                                         \
+  template <std::memory_order order = std::memory_order_relaxed> \
+  type name() const {                                            \
+    type result = LoadCompressedSmi<order>(&name##_);            \
+    ASSERT(!result.IsHeapObject());                              \
+    return result;                                               \
+  }                                                              \
+  template <std::memory_order order = std::memory_order_relaxed> \
+  void set_##name(type value) {                                  \
+    ASSERT(!value.IsHeapObject());                               \
+    StoreCompressedSmi(&name##_, value);                         \
+  }                                                              \
+                                                                 \
+ protected:                                                      \
   Compressed##type name##_;
 
 // Used to define untagged object fields that can have values wrapped in
@@ -1040,19 +1039,19 @@ inline intptr_t ObjectPtr::GetClassId() const {
 // PRECOMPILER_WSR_FIELD_DECLARATION and defined in object.cc with
 // PRECOMPILER_WSR_FIELD_DEFINITION.
 #if defined(DART_PRECOMPILER)
-#define WSR_COMPRESSED_POINTER_FIELD(Type, Name)                               \
+#define WSR_COMPRESSED_POINTER_FIELD(Type, Name) \
   COMPRESSED_POINTER_FIELD(ObjectPtr, Name)
 #else
-#define WSR_COMPRESSED_POINTER_FIELD(Type, Name)                               \
+#define WSR_COMPRESSED_POINTER_FIELD(Type, Name) \
   COMPRESSED_POINTER_FIELD(Type, Name)
 #endif
 
 class UntaggedClass : public UntaggedObject {
  public:
   enum ClassFinalizedState {
-    kAllocated = 0,  // Initial state.
-    kPreFinalized,   // VM classes: size precomputed, but no checks done.
-    kFinalized,      // Class parsed, code compiled, not ready for allocation.
+    kAllocated = 0,      // Initial state.
+    kPreFinalized,       // VM classes: size precomputed, but no checks done.
+    kFinalized,          // Class parsed, code compiled, not ready for allocation.
     kAllocateFinalized,  // CHA invalidated, class is ready for allocation.
   };
   enum ClassLoadingState {
@@ -1283,8 +1282,8 @@ class UntaggedFunction : public UntaggedObject {
 
   static const char* KindToCString(Kind k) {
     switch (k) {
-#define KIND_CASE(Name)                                                        \
-  case Kind::k##Name:                                                          \
+#define KIND_CASE(Name) \
+  case Kind::k##Name:   \
     return #Name;
       FOR_EACH_RAW_FUNCTION_KIND(KIND_CASE)
 #undef KIND_CASE
@@ -1295,10 +1294,10 @@ class UntaggedFunction : public UntaggedObject {
   }
 
   static bool ParseKind(const char* str, Kind* out) {
-#define KIND_CASE(Name)                                                        \
-  if (strcmp(str, #Name) == 0) {                                               \
-    *out = Kind::k##Name;                                                      \
-    return true;                                                               \
+#define KIND_CASE(Name)          \
+  if (strcmp(str, #Name) == 0) { \
+    *out = Kind::k##Name;        \
+    return true;                 \
   }
     FOR_EACH_RAW_FUNCTION_KIND(KIND_CASE)
 #undef KIND_CASE
@@ -1332,8 +1331,10 @@ class UntaggedFunction : public UntaggedObject {
     static constexpr intptr_t kCapacity =
         (kBitsPerByte * sizeof(uint64_t)) / kBitsPerElement;
 
-    UnboxedParameterBitmap() : bitmap_(0) {}
-    explicit UnboxedParameterBitmap(uint64_t bitmap) : bitmap_(bitmap) {}
+    UnboxedParameterBitmap()
+        : bitmap_(0) {}
+    explicit UnboxedParameterBitmap(uint64_t bitmap)
+        : bitmap_(bitmap) {}
     UnboxedParameterBitmap(const UnboxedParameterBitmap&) = default;
     UnboxedParameterBitmap& operator=(const UnboxedParameterBitmap&) = default;
 
@@ -1430,7 +1431,7 @@ class UntaggedFunction : public UntaggedObject {
   UnboxedParameterBitmap unboxed_parameters_info_;
 #endif
 
-#if !defined(DART_PRECOMPILED_RUNTIME) ||                                      \
+#if !defined(DART_PRECOMPILED_RUNTIME) || \
     (defined(DART_PRECOMPILED_RUNTIME) && !defined(PRODUCT))
   TokenPosition token_pos_;
 #endif
@@ -1441,12 +1442,12 @@ class UntaggedFunction : public UntaggedObject {
 
   AtomicBitFieldContainer<uint32_t> kind_tag_;  // See Function::KindTagBits.
 
-#define JIT_FUNCTION_COUNTERS(F)                                               \
-  F(intptr_t, int32_t, usage_counter)                                          \
-  F(intptr_t, uint16_t, optimized_instruction_count)                           \
-  F(intptr_t, uint16_t, optimized_call_site_count)                             \
-  F(int8_t, int8_t, deoptimization_counter)                                    \
-  F(intptr_t, int8_t, state_bits)                                              \
+#define JIT_FUNCTION_COUNTERS(F)                     \
+  F(intptr_t, int32_t, usage_counter)                \
+  F(intptr_t, uint16_t, optimized_instruction_count) \
+  F(intptr_t, uint16_t, optimized_call_site_count)   \
+  F(int8_t, int8_t, deoptimization_counter)          \
+  F(intptr_t, int8_t, state_bits)                    \
   F(int, int8_t, inlining_depth)
 
 #if !defined(DART_PRECOMPILED_RUNTIME)
@@ -2050,22 +2051,22 @@ class UntaggedPcDescriptors : public UntaggedObject {
 // of enum values inside the initialization expression are hardcoded currently,
 // so the second argument is useless outside the enum definition and should be
 // dropped by other users of this macro.
-#define FOR_EACH_RAW_PC_DESCRIPTOR(V)                                          \
-  /* Deoptimization continuation point. */                                     \
-  V(Deopt, 1)                                                                  \
-  /* IC call. */                                                               \
-  V(IcCall, kDeopt << 1)                                                       \
-  /* Call to a known target via stub. */                                       \
-  V(UnoptStaticCall, kIcCall << 1)                                             \
-  /* Runtime call. */                                                          \
-  V(RuntimeCall, kUnoptStaticCall << 1)                                        \
-  /* OSR entry point in unopt. code. */                                        \
-  V(OsrEntry, kRuntimeCall << 1)                                               \
-  /* Call rewind target address. */                                            \
-  V(Rewind, kOsrEntry << 1)                                                    \
-  /* Target-word-size relocation. */                                           \
-  V(BSSRelocation, kRewind << 1)                                               \
-  V(Other, kBSSRelocation << 1)                                                \
+#define FOR_EACH_RAW_PC_DESCRIPTOR(V)      \
+  /* Deoptimization continuation point. */ \
+  V(Deopt, 1)                              \
+  /* IC call. */                           \
+  V(IcCall, kDeopt << 1)                   \
+  /* Call to a known target via stub. */   \
+  V(UnoptStaticCall, kIcCall << 1)         \
+  /* Runtime call. */                      \
+  V(RuntimeCall, kUnoptStaticCall << 1)    \
+  /* OSR entry point in unopt. code. */    \
+  V(OsrEntry, kRuntimeCall << 1)           \
+  /* Call rewind target address. */        \
+  V(Rewind, kOsrEntry << 1)                \
+  /* Target-word-size relocation. */       \
+  V(BSSRelocation, kRewind << 1)           \
+  V(Other, kBSSRelocation << 1)            \
   V(AnyKind, -1)
 
   enum Kind {
@@ -2437,11 +2438,11 @@ class UntaggedContext : public UntaggedObject {
                                 ObjectPtr);  // num_variables_
 };
 
-#define CONTEXT_SCOPE_VARIABLE_DESC_FLAG_LIST(V)                               \
-  V(Final)                                                                     \
-  V(Late)                                                                      \
-  V(Nullable)                                                                  \
-  V(Invisible)                                                                 \
+#define CONTEXT_SCOPE_VARIABLE_DESC_FLAG_LIST(V) \
+  V(Final)                                       \
+  V(Late)                                        \
+  V(Nullable)                                    \
+  V(Invisible)                                   \
   V(AwaiterLink)
 
 class UntaggedContextScope : public UntaggedObject {
@@ -2487,12 +2488,12 @@ class UntaggedContextScope : public UntaggedObject {
     return reinterpret_cast<const VariableDesc*>(data()) + index;
   }
 
-#define DEFINE_ACCESSOR(type, name)                                            \
-  type name##_at(intptr_t index) {                                             \
-    return LoadCompressedPointer<type>(&VariableDescAddr(index)->name);        \
-  }                                                                            \
-  void set_##name##_at(intptr_t index, type value) {                           \
-    StoreCompressedPointer(&VariableDescAddr(index)->name, value);             \
+#define DEFINE_ACCESSOR(type, name)                                     \
+  type name##_at(intptr_t index) {                                      \
+    return LoadCompressedPointer<type>(&VariableDescAddr(index)->name); \
+  }                                                                     \
+  void set_##name##_at(intptr_t index, type value) {                    \
+    StoreCompressedPointer(&VariableDescAddr(index)->name, value);      \
   }
   DEFINE_ACCESSOR(SmiPtr, declaration_token_pos)
   DEFINE_ACCESSOR(SmiPtr, token_pos)
@@ -3247,7 +3248,7 @@ class UntaggedArray : public UntaggedInstance {
   friend class Page;
   template <bool>
   friend class MarkingVisitorBase;
-  friend class FastObjectCopy;  // For initializing fields.
+  friend class FastObjectCopy;                                    // For initializing fields.
   friend void UpdateLengthField(intptr_t, ObjectPtr, ObjectPtr);  // length_
 };
 
@@ -3775,6 +3776,35 @@ class UntaggedFutureOr : public UntaggedInstance {
   VISIT_TO(type_arguments)
 };
 
+class UntaggedCoroutineLink : public UntaggedObject {
+  RAW_HEAP_OBJECT_IMPLEMENTATION(CoroutineLink);
+  COMPRESSED_POINTER_FIELD(CoroutineLinkPtr, next)
+  VISIT_FROM(next)
+  COMPRESSED_POINTER_FIELD(CoroutineLinkPtr, previous)
+  COMPRESSED_POINTER_FIELD(CoroutinePtr, value)
+  VISIT_TO(value)
+  CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
+
+ public:
+  bool IsEmpty();
+
+  DART_FORCE_INLINE
+  bool IsNotEmpty() { return !IsEmpty(); }
+
+  DART_FORCE_INLINE
+  void Initialize() { previous_ = next_ = (CoroutineLinkPtr)this; }
+
+  static void Remove(CoroutineLinkPtr item);
+
+  static void AddHead(CoroutineLinkPtr to, CoroutineLinkPtr item);
+
+  static void StealHead(CoroutineLinkPtr to, CoroutineLinkPtr item);
+
+  void VisitObjectPointers(ObjectPointerVisitor* visitor);
+
+  void VisitStacks(ObjectPointerVisitor* visitor);
+};
+
 class UntaggedCoroutine : public UntaggedInstance {
   RAW_HEAP_OBJECT_IMPLEMENTATION(Coroutine);
   COMPRESSED_POINTER_FIELD(StringPtr, name)
@@ -3787,9 +3817,9 @@ class UntaggedCoroutine : public UntaggedInstance {
   COMPRESSED_POINTER_FIELD(ObjectPtr, processor)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, to_processor_next)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, to_processor_previous)
-  VISIT_TO(to_processor_previous)
+  COMPRESSED_POINTER_FIELD(CoroutineLinkPtr, to_state)
+  VISIT_TO(to_state)
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
-  CoroutineLink to_state_;
   uword stack_size_;
   uword native_stack_base_;
   uword stack_root_;
@@ -3800,7 +3830,6 @@ class UntaggedCoroutine : public UntaggedInstance {
   uword index_;
 
  public:
-  CoroutineLink* to_state() { return &to_state_; }
   uword stack_size() const { return stack_size_; }
   uword native_stack_base() const { return native_stack_base_; }
   uword stack_base() const { return stack_base_; }
@@ -3811,12 +3840,16 @@ class UntaggedCoroutine : public UntaggedInstance {
   uword attributes() const { return attributes_; }
   void set_attributes(uword attributes) { attributes_ = attributes; }
 
-  uword index() const { return index_; }  
+  uword index() const { return index_; }
   void set_index(uword index) { index_ = index; }
 
   bool HasStackHeadroom() {
     return OSThread::GetCurrentStackPointer() > overflow_stack_limit_;
   }
+
+  void VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor);
+
+  void VisitNativeStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor);
 };
 
 #undef WSR_COMPRESSED_POINTER_FIELD

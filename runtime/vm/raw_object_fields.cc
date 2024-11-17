@@ -232,6 +232,9 @@ namespace dart {
   F(TypedDataView, typed_data_)                                                \
   F(TypedDataView, offset_in_bytes_)                                           \
   F(FutureOr, type_arguments_)                                                 \
+  F(CoroutineLink, next_)                                                      \
+  F(CoroutineLink, previous_)                                                  \
+  F(CoroutineLink, value_)                                                     \
   F(Coroutine, name_)                                                          \
   F(Coroutine, entry_)                                                         \
   F(Coroutine, trampoline_)                                                    \

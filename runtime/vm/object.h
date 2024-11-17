@@ -566,6 +566,7 @@ class Object {
     return weak_serialization_reference_class_;
   }
   static ClassPtr weak_array_class() { return weak_array_class_; }
+  static ClassPtr coroutine_link_class() { return coroutine_link_class_; }
 
   // Initialize the VM isolate.
   static void InitNullAndBool(IsolateGroup* isolate_group);
@@ -1007,6 +1008,7 @@ class Object {
   static ClassPtr unwind_error_class_;
   static ClassPtr weak_serialization_reference_class_;
   static ClassPtr weak_array_class_;
+  static ClassPtr coroutine_link_class_;
 
 #define DECLARE_SHARED_READONLY_HANDLE(Type, name) static Type* name##_;
   SHARED_READONLY_HANDLES_LIST(DECLARE_SHARED_READONLY_HANDLE)
@@ -12703,6 +12705,19 @@ class SuspendState : public Instance {
   friend class Class;
 };
 
+class CoroutineLink : public Object {
+ public:
+  static intptr_t InstanceSize() {
+    return RoundedAllocationSize(sizeof(UntaggedCoroutineLink));
+  }
+
+  static CoroutineLinkPtr New();
+
+ private:
+  FINAL_HEAP_OBJECT_IMPLEMENTATION(CoroutineLink, Object);
+  friend class Class;
+};
+
 class Coroutine : public Instance {
  public:
   enum CoroutineAttributes {
@@ -12827,7 +12842,7 @@ class Coroutine : public Instance {
     return OFFSET_OF(UntaggedCoroutine, to_processor_previous_);
   }
 
-  CoroutineLink* to_state() const { return untag()->to_state(); }
+  CoroutineLinkPtr to_state() const { return untag()->to_state(); }
   static uword to_state_offset() {
     return OFFSET_OF(UntaggedCoroutine, to_state_);
   }

@@ -2133,10 +2133,17 @@ void Coroutine::PrintJSONImpl(JSONStream* stream, bool ref) const {
   Instance::PrintJSONImpl(stream, ref);
 }
 
+void CoroutineLink::PrintJSONImpl(JSONStream* stream, bool ref) const {
+  Object::PrintJSONImpl(stream, ref);
+}
+
 void SuspendState::PrintImplementationFieldsImpl(
     const JSONArray& jsarr_fields) const {}
 
 void Coroutine::PrintImplementationFieldsImpl(
+    const JSONArray& jsarr_fields) const {}
+
+void CoroutineLink::PrintImplementationFieldsImpl(
     const JSONArray& jsarr_fields) const {}
 
 #endif

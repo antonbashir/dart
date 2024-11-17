@@ -71,7 +71,6 @@ vm_sources = [
   "cpuinfo_linux.cc",
   "cpuinfo_macos.cc",
   "cpuinfo_win.cc",
-  "coroutine.h",
   "dart.cc",
   "dart.h",
   "dart_api_impl.h",

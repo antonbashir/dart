@@ -1,3 +1,5 @@
+// VMOptions=--coroutines_registry_shrink_capacity=64
+
 import 'dart:fiber';
 import 'dart:async';
 import 'package:expect/expect.dart';
@@ -16,7 +18,7 @@ final suites = {
   "flow": flow.tests,
   "exceptions": exceptions.tests,
 };
-
+ 
 void main(List<String> arguments) {
   if (arguments.isEmpty) {
     for (var suite in suites.entries) {

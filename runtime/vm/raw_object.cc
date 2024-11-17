@@ -13,6 +13,7 @@
 #include "vm/object.h"
 #include "vm/runtime_entry.h"
 #include "vm/stack_frame.h"
+#include "vm/tagged_pointer.h"
 #include "vm/visitor.h"
 
 namespace dart {
@@ -236,10 +237,6 @@ intptr_t UntaggedObject::HeapSizeFromClass(uword tags) const {
       instance_size = WeakSerializationReference::InstanceSize();
       break;
     }
-    case kCoroutineCid: {
-      instance_size = Coroutine::InstanceSize();
-      break;
-    }
     default: {
       // Get the (constant) instance size out of the class object.
       // TODO(koda): Add Size(ClassTable*) interface to allow caching in loops.
@@ -286,11 +283,11 @@ intptr_t UntaggedObject::VisitPointersPredefined(ObjectPointerVisitor* visitor,
   intptr_t size = 0;
 
   switch (class_id) {
-#define RAW_VISITPOINTERS(clazz)                                               \
-  case k##clazz##Cid: {                                                        \
-    clazz##Ptr raw_obj = static_cast<clazz##Ptr>(this);                        \
-    size = Untagged##clazz::Visit##clazz##Pointers(raw_obj, visitor);          \
-    break;                                                                     \
+#define RAW_VISITPOINTERS(clazz)                                      \
+  case k##clazz##Cid: {                                               \
+    clazz##Ptr raw_obj = static_cast<clazz##Ptr>(this);               \
+    size = Untagged##clazz::Visit##clazz##Pointers(raw_obj, visitor); \
+    break;                                                            \
   }
     CLASS_LIST_NO_OBJECT(RAW_VISITPOINTERS)
 #undef RAW_VISITPOINTERS
@@ -311,8 +308,8 @@ intptr_t UntaggedObject::VisitPointersPredefined(ObjectPointerVisitor* visitor,
 #undef RAW_VISITPOINTERS
     case kByteDataViewCid:
     case kUnmodifiableByteDataViewCid:
-#define RAW_VISITPOINTERS(clazz)                                               \
-  case kTypedData##clazz##ViewCid:                                             \
+#define RAW_VISITPOINTERS(clazz)   \
+  case kTypedData##clazz##ViewCid: \
   case kUnmodifiableTypedData##clazz##ViewCid:
       CLASS_LIST_TYPED_DATA(RAW_VISITPOINTERS) {
         auto raw_obj = static_cast<TypedDataViewPtr>(this);
@@ -410,29 +407,29 @@ void UntaggedObject::VisitPointersPrecise(ObjectPointerVisitor* visitor) {
 // Most objects are visited with this function. It calls the from() and to()
 // methods on the raw object to get the first and last cells that need
 // visiting.
-#define REGULAR_VISITOR(Type)                                                  \
-  intptr_t Untagged##Type::Visit##Type##Pointers(                              \
-      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {                      \
-    /* Make sure that we got here with the tagged pointer as this. */          \
-    ASSERT(raw_obj->IsHeapObject());                                           \
-    ASSERT_UNCOMPRESSED(Type);                                                 \
-    visitor->VisitPointers(raw_obj->untag()->from(), raw_obj->untag()->to());  \
-    return Type::InstanceSize();                                               \
+#define REGULAR_VISITOR(Type)                                                 \
+  intptr_t Untagged##Type::Visit##Type##Pointers(                             \
+      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {                     \
+    /* Make sure that we got here with the tagged pointer as this. */         \
+    ASSERT(raw_obj->IsHeapObject());                                          \
+    ASSERT_UNCOMPRESSED(Type);                                                \
+    visitor->VisitPointers(raw_obj->untag()->from(), raw_obj->untag()->to()); \
+    return Type::InstanceSize();                                              \
   }
 
 #if !defined(DART_COMPRESSED_POINTERS)
 #define COMPRESSED_VISITOR(Type) REGULAR_VISITOR(Type)
 #else
-#define COMPRESSED_VISITOR(Type)                                               \
-  intptr_t Untagged##Type::Visit##Type##Pointers(                              \
-      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {                      \
-    /* Make sure that we got here with the tagged pointer as this. */          \
-    ASSERT(raw_obj->IsHeapObject());                                           \
-    ASSERT_COMPRESSED(Type);                                                   \
-    visitor->VisitCompressedPointers(raw_obj->heap_base(),                     \
-                                     raw_obj->untag()->from(),                 \
-                                     raw_obj->untag()->to());                  \
-    return Type::InstanceSize();                                               \
+#define COMPRESSED_VISITOR(Type)                                      \
+  intptr_t Untagged##Type::Visit##Type##Pointers(                     \
+      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {             \
+    /* Make sure that we got here with the tagged pointer as this. */ \
+    ASSERT(raw_obj->IsHeapObject());                                  \
+    ASSERT_COMPRESSED(Type);                                          \
+    visitor->VisitCompressedPointers(raw_obj->heap_base(),            \
+                                     raw_obj->untag()->from(),        \
+                                     raw_obj->untag()->to());         \
+    return Type::InstanceSize();                                      \
   }
 #endif
 
@@ -441,75 +438,75 @@ void UntaggedObject::VisitPointersPrecise(ObjectPointerVisitor* visitor) {
 //
 // Though as opposed to Similar to [REGULAR_VISITOR] this visitor will call the
 // specialized VisitTypedDataViewPointers
-#define TYPED_DATA_VIEW_VISITOR(Type)                                          \
-  intptr_t Untagged##Type::Visit##Type##Pointers(                              \
-      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {                      \
-    /* Make sure that we got here with the tagged pointer as this. */          \
-    ASSERT(raw_obj->IsHeapObject());                                           \
-    ASSERT_COMPRESSED(Type);                                                   \
-    visitor->VisitTypedDataViewPointers(raw_obj, raw_obj->untag()->from(),     \
-                                        raw_obj->untag()->to());               \
-    return Type::InstanceSize();                                               \
+#define TYPED_DATA_VIEW_VISITOR(Type)                                      \
+  intptr_t Untagged##Type::Visit##Type##Pointers(                          \
+      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {                  \
+    /* Make sure that we got here with the tagged pointer as this. */      \
+    ASSERT(raw_obj->IsHeapObject());                                       \
+    ASSERT_COMPRESSED(Type);                                               \
+    visitor->VisitTypedDataViewPointers(raw_obj, raw_obj->untag()->from(), \
+                                        raw_obj->untag()->to());           \
+    return Type::InstanceSize();                                           \
   }
 
 // For variable length objects. get_length is a code snippet that gets the
 // length of the object, which is passed to InstanceSize and the to() method.
-#define VARIABLE_VISITOR(Type, get_length)                                     \
-  intptr_t Untagged##Type::Visit##Type##Pointers(                              \
-      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {                      \
-    /* Make sure that we got here with the tagged pointer as this. */          \
-    ASSERT(raw_obj->IsHeapObject());                                           \
-    intptr_t length = get_length;                                              \
-    visitor->VisitPointers(raw_obj->untag()->from(),                           \
-                           raw_obj->untag()->to(length));                      \
-    return Type::InstanceSize(length);                                         \
+#define VARIABLE_VISITOR(Type, get_length)                            \
+  intptr_t Untagged##Type::Visit##Type##Pointers(                     \
+      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {             \
+    /* Make sure that we got here with the tagged pointer as this. */ \
+    ASSERT(raw_obj->IsHeapObject());                                  \
+    intptr_t length = get_length;                                     \
+    visitor->VisitPointers(raw_obj->untag()->from(),                  \
+                           raw_obj->untag()->to(length));             \
+    return Type::InstanceSize(length);                                \
   }
 
 #if !defined(DART_COMPRESSED_POINTERS)
-#define VARIABLE_COMPRESSED_VISITOR(Type, get_length)                          \
+#define VARIABLE_COMPRESSED_VISITOR(Type, get_length) \
   VARIABLE_VISITOR(Type, get_length)
 #else
-#define VARIABLE_COMPRESSED_VISITOR(Type, get_length)                          \
-  intptr_t Untagged##Type::Visit##Type##Pointers(                              \
-      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {                      \
-    /* Make sure that we got here with the tagged pointer as this. */          \
-    ASSERT(raw_obj->IsHeapObject());                                           \
-    intptr_t length = get_length;                                              \
-    visitor->VisitCompressedPointers(raw_obj->heap_base(),                     \
-                                     raw_obj->untag()->from(),                 \
-                                     raw_obj->untag()->to(length));            \
-    return Type::InstanceSize(length);                                         \
+#define VARIABLE_COMPRESSED_VISITOR(Type, get_length)                 \
+  intptr_t Untagged##Type::Visit##Type##Pointers(                     \
+      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {             \
+    /* Make sure that we got here with the tagged pointer as this. */ \
+    ASSERT(raw_obj->IsHeapObject());                                  \
+    intptr_t length = get_length;                                     \
+    visitor->VisitCompressedPointers(raw_obj->heap_base(),            \
+                                     raw_obj->untag()->from(),        \
+                                     raw_obj->untag()->to(length));   \
+    return Type::InstanceSize(length);                                \
   }
 #endif
 
 // For fixed-length objects that don't have any pointers that need visiting.
-#define NULL_VISITOR(Type)                                                     \
-  intptr_t Untagged##Type::Visit##Type##Pointers(                              \
-      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {                      \
-    /* Make sure that we got here with the tagged pointer as this. */          \
-    ASSERT(raw_obj->IsHeapObject());                                           \
-    ASSERT_NOTHING_TO_VISIT(Type);                                             \
-    return Type::InstanceSize();                                               \
+#define NULL_VISITOR(Type)                                            \
+  intptr_t Untagged##Type::Visit##Type##Pointers(                     \
+      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {             \
+    /* Make sure that we got here with the tagged pointer as this. */ \
+    ASSERT(raw_obj->IsHeapObject());                                  \
+    ASSERT_NOTHING_TO_VISIT(Type);                                    \
+    return Type::InstanceSize();                                      \
   }
 
 // For objects that don't have any pointers that need visiting, but have a
 // variable length.
-#define VARIABLE_NULL_VISITOR(Type, get_length)                                \
-  intptr_t Untagged##Type::Visit##Type##Pointers(                              \
-      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {                      \
-    /* Make sure that we got here with the tagged pointer as this. */          \
-    ASSERT(raw_obj->IsHeapObject());                                           \
-    ASSERT_NOTHING_TO_VISIT(Type);                                             \
-    intptr_t length = get_length;                                              \
-    return Type::InstanceSize(length);                                         \
+#define VARIABLE_NULL_VISITOR(Type, get_length)                       \
+  intptr_t Untagged##Type::Visit##Type##Pointers(                     \
+      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {             \
+    /* Make sure that we got here with the tagged pointer as this. */ \
+    ASSERT(raw_obj->IsHeapObject());                                  \
+    ASSERT_NOTHING_TO_VISIT(Type);                                    \
+    intptr_t length = get_length;                                     \
+    return Type::InstanceSize(length);                                \
   }
 
 // For objects that are never instantiated on the heap.
-#define UNREACHABLE_VISITOR(Type)                                              \
-  intptr_t Untagged##Type::Visit##Type##Pointers(                              \
-      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) {                      \
-    UNREACHABLE();                                                             \
-    return 0;                                                                  \
+#define UNREACHABLE_VISITOR(Type)                         \
+  intptr_t Untagged##Type::Visit##Type##Pointers(         \
+      Type##Ptr raw_obj, ObjectPointerVisitor* visitor) { \
+    UNREACHABLE();                                        \
+    return 0;                                             \
   }
 
 COMPRESSED_VISITOR(Class)
@@ -654,48 +651,87 @@ intptr_t UntaggedSuspendState::VisitSuspendStatePointers(
 intptr_t UntaggedCoroutine::VisitCoroutinePointers(
     CoroutinePtr raw_obj,
     ObjectPointerVisitor* visitor) {
-  ASSERT(raw_obj->IsHeapObject());
-  auto native_stack = raw_obj->untag()->native_stack_base();
-  auto stack = raw_obj->untag()->stack_base();
-  auto attributes = raw_obj->untag()->attributes();
+  visitor->VisitCompressedPointers(raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
+  return Coroutine::InstanceSize();
+}
 
-  if (visitor->CanVisitCoroutinePointers(raw_obj)) {
-    visitor->VisitCompressedPointers(
-        raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
+intptr_t UntaggedCoroutineLink::VisitCoroutineLinkPointers(CoroutineLinkPtr raw_obj,
+                                                           ObjectPointerVisitor* visitor) {
+  visitor->VisitCompressedPointers(raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
+  return CoroutineLink::InstanceSize();
+}
 
-    Thread* thread = Thread::Current();
-    if (thread->IsDartMutatorThread()) {
-      if (native_stack != 0 &&
-          (attributes & (Coroutine::CoroutineAttributes::suspended |
-                         Coroutine::CoroutineAttributes::running)) != 0) {
-        const uword fp = *reinterpret_cast<uword*>(native_stack);
-        StackFrameIterator frames_iterator(
-            fp, ValidationPolicy::kDontValidateFrames, thread,
-            StackFrameIterator::kNoCrossThreadIteration,
-            StackFrameIterator::kStackOwnerCoroutine);
-        StackFrame* frame = frames_iterator.NextFrame();
-        while (frame != nullptr) {
-          frame->VisitObjectPointers(visitor);
-          frame = frames_iterator.NextFrame();
-        }
-      }
+bool UntaggedCoroutineLink::IsEmpty() { return previous_ == next_ && next_.untag() == this; }
 
-      if ((attributes & (Coroutine::CoroutineAttributes::suspended)) != 0) {
-        const uword fp = *reinterpret_cast<uword*>(stack);
-        StackFrameIterator frames_iterator(
-            fp, ValidationPolicy::kDontValidateFrames, thread,
-            StackFrameIterator::kNoCrossThreadIteration,
-            StackFrameIterator::kStackOwnerCoroutine);
-        StackFrame* frame = frames_iterator.NextFrame();
-        while (frame != nullptr) {
-          frame->VisitObjectPointers(visitor);
-          frame = frames_iterator.NextFrame();
-        }
-      }
+void UntaggedCoroutineLink::Remove(CoroutineLinkPtr item) {
+  item.untag()->previous_.untag()->next_ = item.untag()->next_;
+  item.untag()->next_.untag()->previous_ = item.untag()->previous_;
+  item.untag()->next_ = item;
+  item.untag()->previous_ = item;
+}
+
+void UntaggedCoroutineLink::AddHead(CoroutineLinkPtr to, CoroutineLinkPtr item) {
+  item.untag()->previous_ = to;
+  item.untag()->next_ = to.untag()->next_;
+  item.untag()->previous_.untag()->next_ = item;
+  item.untag()->next_.untag()->previous_ = item;
+}
+
+void UntaggedCoroutineLink::StealHead(CoroutineLinkPtr to, CoroutineLinkPtr item) {
+  item.untag()->previous_.untag()->next_ = item.untag()->next_;
+  item.untag()->next_.untag()->previous_ = item.untag()->previous_;
+  item.untag()->previous_ = to;
+  item.untag()->next_ = to.untag()->next_;
+  item.untag()->previous_.untag()->next_ = item;
+  item.untag()->next_.untag()->previous_ = item;
+}
+
+void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor) {
+  if (!visitor->CanVisitCoroutinePointers(coroutine)) {
+    return;
+  }
+  auto stack = stack_base_;
+  auto attributes = attributes_;
+  Thread* thread = Thread::Current();
+  if ((attributes & (Coroutine::CoroutineAttributes::suspended)) != 0) {
+    const uword fp = *reinterpret_cast<uword*>(stack);
+    StackFrameIterator frames_iterator(
+        fp, ValidationPolicy::kDontValidateFrames, thread,
+        StackFrameIterator::kAllowCrossThreadIteration,
+        StackFrameIterator::kStackOwnerCoroutine);
+    StackFrame* frame = frames_iterator.NextFrame();
+    while (frame != nullptr) {
+      frame->VisitObjectPointers(visitor);
+      frame = frames_iterator.NextFrame();
     }
   }
+}
 
-  return Coroutine::InstanceSize();
+void UntaggedCoroutine::VisitNativeStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor) {
+  if (!visitor->CanVisitCoroutinePointers(coroutine)) {
+    return;
+  }
+  auto native_stack = native_stack_base_;
+  auto attributes = attributes_;
+  Thread* thread = Thread::Current();
+  if (native_stack != 0 && (attributes & (Coroutine::CoroutineAttributes::suspended | Coroutine::CoroutineAttributes::running)) != 0) {
+    const uword fp = *reinterpret_cast<uword*>(native_stack);
+    StackFrameIterator frames_iterator(
+        fp, ValidationPolicy::kDontValidateFrames, thread,
+        StackFrameIterator::kAllowCrossThreadIteration,
+        StackFrameIterator::kStackOwnerCoroutine);
+    StackFrame* frame = frames_iterator.NextFrame();
+    while (frame != nullptr) {
+      frame->VisitObjectPointers(visitor);
+      frame = frames_iterator.NextFrame();
+    }
+  }
+}
+
+void UntaggedCoroutineLink::VisitStacks(ObjectPointerVisitor* visitor) {
+  for (auto item = next().untag(); item != this; item = item->next().untag()) {
+    item->value_->untag()->VisitStack(item->value_, visitor);
+  }
 }
 
 bool UntaggedCode::ContainsPC(const ObjectPtr raw_obj, uword pc) {
@@ -821,8 +857,8 @@ END_LEAF_RUNTIME_ENTRY
 
 const char* UntaggedPcDescriptors::KindToCString(Kind k) {
   switch (k) {
-#define ENUM_CASE(name, init)                                                  \
-  case Kind::k##name:                                                          \
+#define ENUM_CASE(name, init) \
+  case Kind::k##name:         \
     return #name;
     FOR_EACH_RAW_PC_DESCRIPTOR(ENUM_CASE)
 #undef ENUM_CASE
@@ -833,10 +869,10 @@ const char* UntaggedPcDescriptors::KindToCString(Kind k) {
 
 bool UntaggedPcDescriptors::ParseKind(const char* cstr, Kind* out) {
   ASSERT(cstr != nullptr && out != nullptr);
-#define ENUM_CASE(name, init)                                                  \
-  if (strcmp(#name, cstr) == 0) {                                              \
-    *out = Kind::k##name;                                                      \
-    return true;                                                               \
+#define ENUM_CASE(name, init)     \
+  if (strcmp(#name, cstr) == 0) { \
+    *out = Kind::k##name;         \
+    return true;                  \
   }
   FOR_EACH_RAW_PC_DESCRIPTOR(ENUM_CASE)
 #undef ENUM_CASE

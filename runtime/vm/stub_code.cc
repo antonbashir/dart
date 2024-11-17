@@ -149,6 +149,9 @@ bool StubCode::InCoroutineStub(uword pc) {
   if ((pc >= entry) && (pc < (entry + size))) return true;
   entry = StubCode::CoroutineFork().EntryPoint();
   size = StubCode::CoroutineForkSize();
+  if ((pc >= entry) && (pc < (entry + size))) return true;
+  entry = StubCode::CoroutineTransfer().EntryPoint();
+  size = StubCode::CoroutineTransferSize();
   return ((pc >= entry) && (pc < (entry + size)));
 }
 

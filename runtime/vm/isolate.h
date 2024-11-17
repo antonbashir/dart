@@ -20,7 +20,6 @@
 #include "platform/atomic.h"
 #include "vm/base_isolate.h"
 #include "vm/class_table.h"
-#include "vm/coroutine.h"
 #include "vm/dispatch_table.h"
 #include "vm/exceptions.h"
 #include "vm/ffi_callback_metadata.h"
@@ -1012,14 +1011,17 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   CoroutinePtr RestoreCoroutine();
   void SaveCoroutine(CoroutinePtr coroutine) { saved_coroutine_ = coroutine; }
 
-  CoroutineLink* finished_coroutines() { return &finished_coroutines_; }
-  CoroutineLink* active_coroutines() { return &active_coroutines_; }
+  CoroutineLinkPtr finished_coroutines() { return finished_coroutines_; }
+  CoroutineLinkPtr active_coroutines() { return active_coroutines_; }
   
   GrowableObjectArrayPtr coroutines_registry() { return coroutines_registry_; }
   void set_coroutines_registry(GrowableObjectArrayPtr coroutines) { coroutines_registry_ = coroutines; }
   static intptr_t coroutines_registry_offset() {
     return OFFSET_OF(Isolate, coroutines_registry_);
   }
+
+  void set_active_coroutines(CoroutineLinkPtr link) { active_coroutines_ = link; }
+  void set_finished_coroutines(CoroutineLinkPtr link) { finished_coroutines_ = link; }
 
   IsolateObjectStore* isolate_object_store() const {
     return isolate_object_store_.get();
@@ -1584,8 +1586,8 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   IsolateGroup* const isolate_group_;
   IdleTimeHandler idle_time_handler_;
   CoroutinePtr saved_coroutine_;
-  CoroutineLink active_coroutines_;
-  CoroutineLink finished_coroutines_;
+  CoroutineLinkPtr active_coroutines_;
+  CoroutineLinkPtr finished_coroutines_;
 
 #define ISOLATE_FLAG_BITS(V)                                                   \
   V(ErrorsFatal)                                                               \
