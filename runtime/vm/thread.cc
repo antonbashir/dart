@@ -1105,7 +1105,7 @@ void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
                                        this, cross_thread_policy);
     StackFrame* frame = frames_iterator.NextFrame();
     visitor->set_gc_root_type("frame");
-    while (frame != nullptr && !StubCode::InCoroutineStub(frame->GetCallerPc())) {
+    while (frame != nullptr) {
       frame->VisitObjectPointers(visitor);
       frame = frames_iterator.NextFrame();
     }

@@ -690,21 +690,21 @@ void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor*
   if (!visitor->CanVisitCoroutinePointers(coroutine)) {
     return;
   }
-  auto stack = stack_base_;
-  auto attributes = attributes_;
-  Thread* thread = Thread::Current();
-  if ((attributes & (Coroutine::CoroutineAttributes::suspended)) != 0) {
-    const uword fp = *reinterpret_cast<uword*>(stack);
-    StackFrameIterator frames_iterator(
-        fp, ValidationPolicy::kDontValidateFrames, thread,
-        StackFrameIterator::kAllowCrossThreadIteration,
-        StackFrameIterator::kStackOwnerCoroutine);
-    StackFrame* frame = frames_iterator.NextFrame();
-    while (frame != nullptr) {
-      frame->VisitObjectPointers(visitor);
-      frame = frames_iterator.NextFrame();
-    }
-  }
+  // auto stack = stack_base_;
+  // auto attributes = attributes_;
+  // Thread* thread = Thread::Current();
+  // if ((attributes & (Coroutine::CoroutineAttributes::suspended)) != 0) {
+  //   const uword fp = *reinterpret_cast<uword*>(stack);
+  //   StackFrameIterator frames_iterator(
+  //       fp, ValidationPolicy::kDontValidateFrames, thread,
+  //       StackFrameIterator::kAllowCrossThreadIteration,
+  //       StackFrameIterator::kStackOwnerCoroutine);
+  //   // StackFrame* frame = frames_iterator.NextFrame();
+  //   // while (frame != nullptr && !StubCode::InCoroutineStub(frame->GetCallerPc())) {
+  //   //   frame->VisitObjectPointers(visitor);
+  //   //   frame = frames_iterator.NextFrame();
+  //   // }
+  // }
 }
 
 void UntaggedCoroutine::VisitNativeStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor) {
@@ -721,7 +721,7 @@ void UntaggedCoroutine::VisitNativeStack(CoroutinePtr coroutine, ObjectPointerVi
         StackFrameIterator::kAllowCrossThreadIteration,
         StackFrameIterator::kStackOwnerCoroutine);
     StackFrame* frame = frames_iterator.NextFrame();
-    while (frame != nullptr) {
+    while (frame != nullptr && !StubCode::InCoroutineStub(frame->GetCallerPc())) {
       frame->VisitObjectPointers(visitor);
       frame = frames_iterator.NextFrame();
     }
@@ -729,9 +729,9 @@ void UntaggedCoroutine::VisitNativeStack(CoroutinePtr coroutine, ObjectPointerVi
 }
 
 void UntaggedCoroutineLink::VisitStacks(ObjectPointerVisitor* visitor) {
-  for (auto item = next().untag(); item != this; item = item->next().untag()) {
-    item->value_->untag()->VisitStack(item->value_, visitor);
-  }
+ // for (auto item = next().untag(); item != this; item = item->next().untag()) {
+ //   //item->value_->untag()->VisitStack(item->value_, visitor);
+ // }
 }
 
 bool UntaggedCode::ContainsPC(const ObjectPtr raw_obj, uword pc) {
