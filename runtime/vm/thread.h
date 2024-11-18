@@ -5,6 +5,7 @@
 #ifndef RUNTIME_VM_THREAD_H_
 #define RUNTIME_VM_THREAD_H_
 
+#include "vm/tagged_pointer.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
@@ -1185,6 +1186,8 @@ class Thread : public ThreadState {
   };
   friend class RestoreWriteBarrierInvariantVisitor;
   void RestoreWriteBarrierInvariant(RestoreWriteBarrierInvariantOp op);
+  
+  void RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantOp op);
 
   // Set the current compiler state and return the previous compiler state.
   CompilerState* SetCompilerState(CompilerState* state) {

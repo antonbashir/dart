@@ -655,21 +655,6 @@ StackFrame* StackFrameIterator::FrameSetIterator::NextFrame(bool validate) {
   StackFrame* frame;
   ASSERT(HasNext());
   frame = &stack_frame_;
-  if (stack_owner_ == kStackOwnerCoroutine && StubCode::InCoroutineStub(pc_)) {
-    frame->sp_ = sp_;
-    frame->fp_ = fp_;
-    frame->pc_ = pc_;
-    sp_ = frame->GetCallerSp();
-    fp_ = frame->GetCallerFp();
-    pc_ = frame->GetCallerPc();
-    frame->sp_ = sp_;
-    frame->fp_ = fp_;
-    frame->pc_ = pc_;
-    sp_ = frame->GetCallerSp();
-    fp_ = frame->GetCallerFp();
-    pc_ = frame->GetCallerPc();
-    return NextFrame(validate);
-  }
   frame->sp_ = sp_;
   frame->fp_ = fp_;
   frame->pc_ = pc_;

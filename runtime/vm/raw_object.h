@@ -5,6 +5,7 @@
 #ifndef RUNTIME_VM_RAW_OBJECT_H_
 #define RUNTIME_VM_RAW_OBJECT_H_
 
+#include "platform/globals.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
@@ -3786,13 +3787,12 @@ class UntaggedCoroutineLink : public UntaggedObject {
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
 
  public:
-  bool IsEmpty();
+  static bool IsEmpty(CoroutineLinkPtr item);
 
   DART_FORCE_INLINE
-  bool IsNotEmpty() { return !IsEmpty(); }
+  static bool IsNotEmpty(CoroutineLinkPtr item) { return !IsEmpty(item); }
 
-  DART_FORCE_INLINE
-  void Initialize() { previous_ = next_ = (CoroutineLinkPtr)this; }
+  static void Initialize(CoroutineLinkPtr item);
 
   static void Remove(CoroutineLinkPtr item);
 
@@ -3800,9 +3800,9 @@ class UntaggedCoroutineLink : public UntaggedObject {
 
   static void StealHead(CoroutineLinkPtr to, CoroutineLinkPtr item);
 
-  void VisitObjectPointers(ObjectPointerVisitor* visitor);
+  static void VisitStacks(CoroutineLinkPtr head, ObjectPointerVisitor* visitor);
 
-  void VisitStacks(ObjectPointerVisitor* visitor);
+  void VisitObjectPointers(ObjectPointerVisitor* visitor);
 };
 
 class UntaggedCoroutine : public UntaggedInstance {

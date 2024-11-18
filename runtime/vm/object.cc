@@ -26669,7 +26669,7 @@ CodePtr SuspendState::GetCodeObject() const {
 
 CoroutineLinkPtr CoroutineLink::New() {
   auto link = Object::Allocate<CoroutineLink>(Heap::kNew);
-  link.untag()->Initialize();
+  UntaggedCoroutineLink::Initialize(link);
   return link;
 }
 
@@ -26686,7 +26686,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto page_size = VirtualMemory::PageSize();
   auto stack_size = (size + page_size - 1) & ~(page_size - 1);
 
-  if (finished.untag()->IsNotEmpty()) {
+  if (UntaggedCoroutineLink::IsNotEmpty(finished)) {
     auto& coroutine = Coroutine::Handle(finished.untag()->next().untag()->value());
     coroutine.change_state(CoroutineAttributes::finished, CoroutineAttributes::created);
     UntaggedCoroutineLink::StealHead(active, coroutine.to_state());

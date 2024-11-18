@@ -648,20 +648,19 @@ intptr_t UntaggedSuspendState::VisitSuspendStatePointers(
   return SuspendState::InstanceSize(raw_obj->untag()->frame_capacity());
 }
 
-intptr_t UntaggedCoroutine::VisitCoroutinePointers(
-    CoroutinePtr raw_obj,
-    ObjectPointerVisitor* visitor) {
+intptr_t UntaggedCoroutine::VisitCoroutinePointers(CoroutinePtr raw_obj, ObjectPointerVisitor* visitor) {
   visitor->VisitCompressedPointers(raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
   return Coroutine::InstanceSize();
 }
 
-intptr_t UntaggedCoroutineLink::VisitCoroutineLinkPointers(CoroutineLinkPtr raw_obj,
-                                                           ObjectPointerVisitor* visitor) {
+intptr_t UntaggedCoroutineLink::VisitCoroutineLinkPointers(CoroutineLinkPtr raw_obj, ObjectPointerVisitor* visitor) {
   visitor->VisitCompressedPointers(raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
   return CoroutineLink::InstanceSize();
 }
 
-bool UntaggedCoroutineLink::IsEmpty() { return previous_ == next_ && next_.untag() == this; }
+bool UntaggedCoroutineLink::IsEmpty(CoroutineLinkPtr item) { return item.untag()->previous_ == item.untag()->next_ && item.untag()->next_ == item; }
+
+void UntaggedCoroutineLink::Initialize(CoroutineLinkPtr item) { item.untag()->previous_ = item.untag()->next_ = item; }
 
 void UntaggedCoroutineLink::Remove(CoroutineLinkPtr item) {
   item.untag()->previous_.untag()->next_ = item.untag()->next_;
@@ -690,21 +689,21 @@ void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor*
   if (!visitor->CanVisitCoroutinePointers(coroutine)) {
     return;
   }
-  // auto stack = stack_base_;
-  // auto attributes = attributes_;
-  // Thread* thread = Thread::Current();
-  // if ((attributes & (Coroutine::CoroutineAttributes::suspended)) != 0) {
-  //   const uword fp = *reinterpret_cast<uword*>(stack);
-  //   StackFrameIterator frames_iterator(
-  //       fp, ValidationPolicy::kDontValidateFrames, thread,
-  //       StackFrameIterator::kAllowCrossThreadIteration,
-  //       StackFrameIterator::kStackOwnerCoroutine);
-  //   // StackFrame* frame = frames_iterator.NextFrame();
-  //   // while (frame != nullptr && !StubCode::InCoroutineStub(frame->GetCallerPc())) {
-  //   //   frame->VisitObjectPointers(visitor);
-  //   //   frame = frames_iterator.NextFrame();
-  //   // }
-  // }
+  auto stack = stack_base_;
+  auto attributes = attributes_;
+  Thread* thread = Thread::Current();
+  if ((attributes & (Coroutine::CoroutineAttributes::suspended)) != 0) {
+    const uword fp = *reinterpret_cast<uword*>(stack);
+    StackFrameIterator frames_iterator(
+        fp, ValidationPolicy::kDontValidateFrames, thread,
+        StackFrameIterator::kAllowCrossThreadIteration,
+        StackFrameIterator::kStackOwnerCoroutine);
+    StackFrame* frame = frames_iterator.NextFrame();
+    while (frame != nullptr && (frame->sp() > coroutine.untag()->stack_limit() && frame->sp() <= coroutine.untag()->stack_root())) {
+      frame->VisitObjectPointers(visitor);
+      frame = frames_iterator.NextFrame();
+    }
+  }
 }
 
 void UntaggedCoroutine::VisitNativeStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor) {
@@ -721,17 +720,18 @@ void UntaggedCoroutine::VisitNativeStack(CoroutinePtr coroutine, ObjectPointerVi
         StackFrameIterator::kAllowCrossThreadIteration,
         StackFrameIterator::kStackOwnerCoroutine);
     StackFrame* frame = frames_iterator.NextFrame();
-    while (frame != nullptr && !StubCode::InCoroutineStub(frame->GetCallerPc())) {
+    while (frame != nullptr) {
       frame->VisitObjectPointers(visitor);
       frame = frames_iterator.NextFrame();
     }
   }
 }
 
-void UntaggedCoroutineLink::VisitStacks(ObjectPointerVisitor* visitor) {
- // for (auto item = next().untag(); item != this; item = item->next().untag()) {
- //   //item->value_->untag()->VisitStack(item->value_, visitor);
- // }
+void UntaggedCoroutineLink::VisitStacks(CoroutineLinkPtr head, ObjectPointerVisitor* visitor) {
+ for (auto item = head->untag()->next(); item != head; item = item->untag()->next()) {
+  OS::Print("%ld = %ld\n", UntaggedObject::ToAddr(item), UntaggedObject::ToAddr(head));
+  item->untag()->value_->untag()->VisitStack(item->untag()->value_, visitor);
+ }
 }
 
 bool UntaggedCode::ContainsPC(const ObjectPtr raw_obj, uword pc) {
