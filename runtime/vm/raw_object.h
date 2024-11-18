@@ -24,6 +24,7 @@
 #include "vm/token.h"
 #include "vm/token_position.h"
 #include "vm/visitor.h"
+#include "vm/coroutine.h"
 
 // Currently we have two different axes for offset generation:
 //
@@ -3777,34 +3778,6 @@ class UntaggedFutureOr : public UntaggedInstance {
   VISIT_TO(type_arguments)
 };
 
-class UntaggedCoroutineLink : public UntaggedObject {
-  RAW_HEAP_OBJECT_IMPLEMENTATION(CoroutineLink);
-  COMPRESSED_POINTER_FIELD(CoroutineLinkPtr, next)
-  VISIT_FROM(next)
-  COMPRESSED_POINTER_FIELD(CoroutineLinkPtr, previous)
-  COMPRESSED_POINTER_FIELD(CoroutinePtr, value)
-  VISIT_TO(value)
-  CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
-
- public:
-  static bool IsEmpty(CoroutineLinkPtr item);
-
-  DART_FORCE_INLINE
-  static bool IsNotEmpty(CoroutineLinkPtr item) { return !IsEmpty(item); }
-
-  static void Initialize(CoroutineLinkPtr item);
-
-  static void Remove(CoroutineLinkPtr item);
-
-  static void AddHead(CoroutineLinkPtr to, CoroutineLinkPtr item);
-
-  static void StealHead(CoroutineLinkPtr to, CoroutineLinkPtr item);
-
-  static void VisitStacks(CoroutineLinkPtr head, ObjectPointerVisitor* visitor);
-
-  void VisitObjectPointers(ObjectPointerVisitor* visitor);
-};
-
 class UntaggedCoroutine : public UntaggedInstance {
   RAW_HEAP_OBJECT_IMPLEMENTATION(Coroutine);
   COMPRESSED_POINTER_FIELD(StringPtr, name)
@@ -3817,8 +3790,7 @@ class UntaggedCoroutine : public UntaggedInstance {
   COMPRESSED_POINTER_FIELD(ObjectPtr, processor)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, to_processor_next)
   COMPRESSED_POINTER_FIELD(CoroutinePtr, to_processor_previous)
-  COMPRESSED_POINTER_FIELD(CoroutineLinkPtr, to_state)
-  VISIT_TO(to_state)
+  VISIT_TO(to_processor_previous)
   CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
   uword stack_size_;
   uword native_stack_base_;
@@ -3828,8 +3800,10 @@ class UntaggedCoroutine : public UntaggedInstance {
   uword overflow_stack_limit_;
   uword attributes_;
   uword index_;
+  CoroutineLink to_state_;
 
  public:
+  CoroutineLink* to_state() { return &to_state_; }
   uword stack_size() const { return stack_size_; }
   uword native_stack_base() const { return native_stack_base_; }
   uword stack_base() const { return stack_base_; }

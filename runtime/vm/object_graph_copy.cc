@@ -91,7 +91,6 @@
   V(WeakArray)                     \
   V(WeakSerializationReference)    \
   V(Coroutine)                     \
-  V(CoroutineLink)
 
 namespace dart {
 
@@ -881,7 +880,6 @@ class ObjectCopyBase {
       HANDLE_ILLEGAL_CASE(ReceivePort)
       HANDLE_ILLEGAL_CASE(SuspendState)
       HANDLE_ILLEGAL_CASE(Coroutine)
-      HANDLE_ILLEGAL_CASE(CoroutineLink)
       HANDLE_ILLEGAL_CASE(UserTag)
       default:
         return true;
@@ -1067,7 +1065,6 @@ class RetainingPath {
             case kStackTraceCid:
             case kSuspendStateCid:
             case kCoroutineCid:
-            case kCoroutineLinkCid:
             case kUserTagCid:
             case kWeakPropertyCid:
             case kWeakReferenceCid:

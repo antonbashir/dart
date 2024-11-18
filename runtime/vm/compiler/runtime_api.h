@@ -1034,12 +1034,6 @@ class SuspendState : public AllStatic {
   FINAL_CLASS();
 };
 
-class CoroutineLink : public AllStatic {
- public:
-  static word InstanceSize();
-  FINAL_CLASS();
-};
-
 class Coroutine : public AllStatic {
  public:
   static word name_offset();

@@ -1324,8 +1324,8 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantO
   }
 
   auto active_coroutines = isolate_->active_coroutines();
-  for (auto item = active_coroutines->untag()->next(); item != active_coroutines; item = item->untag()->next()) {
-    auto coroutine = item.untag()->value();
+  for (auto item = active_coroutines->Next(); item != active_coroutines; item = item->Next()) {
+    auto coroutine = item->Value();
     if ((coroutine.untag()->attributes() & Coroutine::CoroutineAttributes::suspended) != 0) {
       StackFrameIterator coroutine_frames_iterator(*reinterpret_cast<uword*>(coroutine.untag()->stack_base()),
                                                    ValidationPolicy::kDontValidateFrames,

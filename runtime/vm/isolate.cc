@@ -2784,7 +2784,9 @@ void Isolate::VisitStackPointers(ObjectPointerVisitor* visitor,
       auto coroutine = mutator_thread_->coroutine();
       auto scheduler = coroutine.untag()->scheduler();
       scheduler->untag()->VisitNativeStack(scheduler, visitor);
-      UntaggedCoroutineLink::VisitStacks(active_coroutines_, visitor);
+      for (auto item = active_coroutines_.Next(); item != &active_coroutines_; item = item->Next()) {
+        item->Value().untag()->VisitStack(item->Value(), visitor);
+      }
     }
     mutator_thread_->VisitObjectPointers(visitor, validate_frames);
   }

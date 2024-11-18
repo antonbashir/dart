@@ -974,8 +974,8 @@ ErrorPtr Dart::InitializeIsolate(Thread* T,
   }
 
   I->set_coroutines_registry(GrowableObjectArray::New(FLAG_coroutines_registry_initial_capacity));
-  I->set_active_coroutines(CoroutineLink::New());
-  I->set_finished_coroutines(CoroutineLink::New());
+  I->active_coroutines()->Initialize();
+  I->finished_coroutines()->Initialize();
   I->set_init_callback_data(isolate_data);
 
 #if !defined(PRODUCT)

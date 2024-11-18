@@ -490,7 +490,6 @@
   SIZEOF(StackTrace, InstanceSize, UntaggedStackTrace)                         \
   SIZEOF(SuspendState, HeaderSize, UntaggedSuspendState)                       \
   SIZEOF(Coroutine, InstanceSize, UntaggedCoroutine)                           \
-  SIZEOF(CoroutineLink, InstanceSize, UntaggedCoroutineLink)                   \
   SIZEOF(String, InstanceSize, UntaggedString)                                 \
   SIZEOF(SubtypeTestCache, InstanceSize, UntaggedSubtypeTestCache)             \
   SIZEOF(LoadingUnit, InstanceSize, UntaggedLoadingUnit)                       \

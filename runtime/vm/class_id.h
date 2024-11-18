@@ -57,7 +57,6 @@ static constexpr intptr_t kClassIdTagMax = (1 << 20) - 1;
   V(ICData)                                                                    \
   V(MegamorphicCache)                                                          \
   V(SubtypeTestCache)                                                          \
-  V(CoroutineLink)                                                             \
   V(LoadingUnit)                                                               \
   V(Error)                                                                     \
   V(ApiError)                                                                  \

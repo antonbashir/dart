@@ -195,7 +195,6 @@ ClassPtr Object::unwind_error_class_ = static_cast<ClassPtr>(RAW_NULL);
 ClassPtr Object::weak_serialization_reference_class_ =
     static_cast<ClassPtr>(RAW_NULL);
 ClassPtr Object::weak_array_class_ = static_cast<ClassPtr>(RAW_NULL);
-ClassPtr Object::coroutine_link_class_ = static_cast<ClassPtr>(RAW_NULL);
 
 static void AppendSubString(BaseTextBuffer* buffer,
                             const char* name,
@@ -960,9 +959,6 @@ void Object::Init(IsolateGroup* isolate_group) {
   cls = Class::New<WeakArray, RTN::WeakArray>(isolate_group);
   weak_array_class_ = cls.ptr();
 
-  cls = Class::New<CoroutineLink, RTN::CoroutineLink>(isolate_group);
-  coroutine_link_class_ = cls.ptr();
-
   ASSERT(class_class() != null_);
 
   // Pre-allocate classes in the vm isolate so that we can for example create a
@@ -1413,7 +1409,6 @@ void Object::Cleanup() {
   language_error_class_ = static_cast<ClassPtr>(RAW_NULL);
   unhandled_exception_class_ = static_cast<ClassPtr>(RAW_NULL);
   unwind_error_class_ = static_cast<ClassPtr>(RAW_NULL);
-  coroutine_link_class_ = static_cast<ClassPtr>(RAW_NULL);
 }
 
 // An object visitor which will mark all visited objects. This is used to
@@ -1530,7 +1525,6 @@ void Object::FinalizeVMIsolate(IsolateGroup* isolate_group) {
   SET_CLASS_NAME(language_error, LanguageError);
   SET_CLASS_NAME(unhandled_exception, UnhandledException);
   SET_CLASS_NAME(unwind_error, UnwindError);
-  SET_CLASS_NAME(coroutine_link, _CoroutineLink);
 
   // Set up names for classes which are also pre-allocated in the vm isolate.
   cls = isolate_group->object_store()->array_class();
@@ -5572,8 +5566,6 @@ const char* Class::GenerateUserVisibleName() const {
       return Symbols::List().ToCString();
     case kCoroutineCid:
       return Symbols::_Coroutine().ToCString();
-    case kCoroutineLinkCid:
-      return Symbols::_CoroutineLink().ToCString();
   }
   String& name = String::Handle(Name());
   name = Symbols::New(Thread::Current(), String::ScrubName(name));
@@ -26667,16 +26659,6 @@ CodePtr SuspendState::GetCodeObject() const {
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
-CoroutineLinkPtr CoroutineLink::New() {
-  auto link = Object::Allocate<CoroutineLink>(Heap::kNew);
-  UntaggedCoroutineLink::Initialize(link);
-  return link;
-}
-
-const char* CoroutineLink::ToCString() const {
-  return "CoroutineLink";
-}
-
 CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto isolate = Isolate::Current();
   auto finished = isolate->finished_coroutines();
@@ -26686,10 +26668,10 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto page_size = VirtualMemory::PageSize();
   auto stack_size = (size + page_size - 1) & ~(page_size - 1);
 
-  if (UntaggedCoroutineLink::IsNotEmpty(finished)) {
-    auto& coroutine = Coroutine::Handle(finished.untag()->next().untag()->value());
+  if (finished->IsNotEmpty()) {
+    auto& coroutine = Coroutine::Handle(finished->Next()->Value());
     coroutine.change_state(CoroutineAttributes::finished, CoroutineAttributes::created);
-    UntaggedCoroutineLink::StealHead(active, coroutine.to_state());
+    CoroutineLink::StealHead(active, coroutine.to_state());
     coroutine.untag()->set_trampoline(trampoline);
     if (UNLIKELY(stack_size != coroutine.stack_size())) {
 #if defined(DART_TARGET_OS_WINDOWS)
@@ -26730,8 +26712,8 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto stack_limit = (uword)(stack_end);
   auto stack_base = (uword)(stack_size + (char*)stack_end);
 
-  coroutine.untag()->to_state_ = CoroutineLink::New();
-  coroutine.untag()->to_state_.untag()->set_value(coroutine.ptr());
+  coroutine.untag()->to_state_.Initialize();
+  coroutine.untag()->to_state_.SetValue(coroutine.ptr());
   coroutine.untag()->stack_size_ = stack_size;
   coroutine.untag()->native_stack_base_ = (uword) nullptr;
   coroutine.untag()->stack_root_ = stack_base;
@@ -26743,7 +26725,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   coroutine.untag()->set_index(registry.Length());
   registry.Add(coroutine);
 
-  UntaggedCoroutineLink::AddHead(active, coroutine.to_state());
+  CoroutineLink::AddHead(active, coroutine.to_state());
 
   return coroutine.ptr();
 }
@@ -26753,12 +26735,12 @@ void Coroutine::recycle(Zone* zone) const {
   auto finished = Isolate::Current()->finished_coroutines();
   untag()->stack_base_ = untag()->stack_root_;
   untag()->native_stack_base_ = (uword) nullptr;
-  UntaggedCoroutineLink::StealHead(finished, to_state());
+  CoroutineLink::StealHead(finished, to_state());
 }
 
 void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) const {
   change_state(CoroutineAttributes::created | CoroutineAttributes::running | CoroutineAttributes::suspended, CoroutineAttributes::disposed);
-  UntaggedCoroutineLink::Remove(to_state());
+  CoroutineLink::Remove(to_state());
   untag()->set_name(String::null());
   untag()->set_entry(Closure::null());
   untag()->set_trampoline(Function::null());
@@ -26882,7 +26864,7 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
 
 void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
   auto active = Isolate::Current()->active_coroutines();
-  UntaggedCoroutineLink::StealHead(active, to_state());
+  CoroutineLink::StealHead(active, to_state());
   thread->EnterCoroutine(ptr());
 }
 

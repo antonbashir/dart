@@ -653,38 +653,6 @@ intptr_t UntaggedCoroutine::VisitCoroutinePointers(CoroutinePtr raw_obj, ObjectP
   return Coroutine::InstanceSize();
 }
 
-intptr_t UntaggedCoroutineLink::VisitCoroutineLinkPointers(CoroutineLinkPtr raw_obj, ObjectPointerVisitor* visitor) {
-  visitor->VisitCompressedPointers(raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
-  return CoroutineLink::InstanceSize();
-}
-
-bool UntaggedCoroutineLink::IsEmpty(CoroutineLinkPtr item) { return item.untag()->previous_ == item.untag()->next_ && item.untag()->next_ == item; }
-
-void UntaggedCoroutineLink::Initialize(CoroutineLinkPtr item) { item.untag()->previous_ = item.untag()->next_ = item; }
-
-void UntaggedCoroutineLink::Remove(CoroutineLinkPtr item) {
-  item.untag()->previous_.untag()->next_ = item.untag()->next_;
-  item.untag()->next_.untag()->previous_ = item.untag()->previous_;
-  item.untag()->next_ = item;
-  item.untag()->previous_ = item;
-}
-
-void UntaggedCoroutineLink::AddHead(CoroutineLinkPtr to, CoroutineLinkPtr item) {
-  item.untag()->previous_ = to;
-  item.untag()->next_ = to.untag()->next_;
-  item.untag()->previous_.untag()->next_ = item;
-  item.untag()->next_.untag()->previous_ = item;
-}
-
-void UntaggedCoroutineLink::StealHead(CoroutineLinkPtr to, CoroutineLinkPtr item) {
-  item.untag()->previous_.untag()->next_ = item.untag()->next_;
-  item.untag()->next_.untag()->previous_ = item.untag()->previous_;
-  item.untag()->previous_ = to;
-  item.untag()->next_ = to.untag()->next_;
-  item.untag()->previous_.untag()->next_ = item;
-  item.untag()->next_.untag()->previous_ = item;
-}
-
 void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor) {
   if (!visitor->CanVisitCoroutinePointers(coroutine)) {
     return;
@@ -725,13 +693,6 @@ void UntaggedCoroutine::VisitNativeStack(CoroutinePtr coroutine, ObjectPointerVi
       frame = frames_iterator.NextFrame();
     }
   }
-}
-
-void UntaggedCoroutineLink::VisitStacks(CoroutineLinkPtr head, ObjectPointerVisitor* visitor) {
- for (auto item = head->untag()->next(); item != head; item = item->untag()->next()) {
-  OS::Print("%ld = %ld\n", UntaggedObject::ToAddr(item), UntaggedObject::ToAddr(head));
-  item->untag()->value_->untag()->VisitStack(item->untag()->value_, visitor);
- }
 }
 
 bool UntaggedCode::ContainsPC(const ObjectPtr raw_obj, uword pc) {

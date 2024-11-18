@@ -7,7 +7,7 @@ void main() {
     final delta = iterations * 0.1;
     var percents = 0;
     for (var i = 0; i < iterations; i++) {
-      print(i);
+      print(i.toString());
       Fiber.spawn(() => Uint8List.new(1 * 1024 * 1024));
       if (i == (percents + delta).truncate()) {
         percents = i;
