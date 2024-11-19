@@ -1114,18 +1114,9 @@ void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
         frame->VisitObjectPointers(visitor);
         frame = frames_iterator.NextFrame();
         OS::Print("2: %s\n", frame->ToCString());
-
         if (frame == nullptr || StubCode::InCoroutineStub(frame->GetCallerPc())) {
           break;
         }
-
-        // if (frame->sp() > coroutine_.untag()->stack_limit()) {
-        //   break;
-        // }
-
-        // if (frame->sp() < coroutine_.untag()->stack_root()) {
-        //   break;
-        // }
       }
     } else {
       while (frame != nullptr) {
@@ -1306,19 +1297,11 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantO
     if (frame == nullptr || StubCode::InCoroutineStub(frame->GetCallerPc())) {
       break;
     }
-    
-    // if (frame->sp() > coroutine_.untag()->stack_limit()) {
-    //   break;
-    // }
-
-    // if (frame->sp() < coroutine_.untag()->stack_root()) {
-    //   break;
-    // }
   }
 
   auto active_coroutines = isolate_->active_coroutines();
   for (auto item = active_coroutines->Next(); item != active_coroutines; item = item->Next()) {
-    if (item->scheduler_ && (item->attributes_ & (Coroutine::CoroutineAttributes::suspended | Coroutine::CoroutineAttributes::running)) != 0) {
+    if (item->native_sp_ != 0 && (item->attributes_ & (Coroutine::CoroutineAttributes::suspended | Coroutine::CoroutineAttributes::running)) != 0) {
       StackFrameIterator scheduler_frames_iterator(*reinterpret_cast<uword*>(item->native_sp_),
                                                   ValidationPolicy::kDontValidateFrames,
                                                   this, cross_thread_policy);

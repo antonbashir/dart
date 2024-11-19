@@ -33,19 +33,19 @@ class CoroutineLink {
   CoroutinePtr Value() const { return value_; }
 
   DART_FORCE_INLINE
-  void SetValue(CoroutinePtr value) { value_ = value; }
+  void SetValue(CoroutinePtr value) { 
+    value_ = value; 
+    native_sp_ = 0;
+    sp_ = 0;
+    attributes_ = 0;
+  }
 
   DART_FORCE_INLINE
-  void SetNativeSP(uword sp) { native_sp_ = sp; }
-
-  DART_FORCE_INLINE
-  void SetSP(uword sp) { sp_ = sp; }
-
-  DART_FORCE_INLINE
-  void SetAttributes(uword attributes) { attributes_ = attributes; }
-
-  DART_FORCE_INLINE
-  void SetIsScheduler(bool scheduler) { scheduler_ = scheduler; }
+  void Synchronize(uword native_sp, uword sp, uword attributes) {
+    attributes_ = attributes;
+    native_sp_ = native_sp;
+    sp_ = sp;
+  }
 
   DART_FORCE_INLINE
   static void Remove(CoroutineLink* item) {
@@ -79,7 +79,6 @@ class CoroutineLink {
   uword native_sp_;
   uword sp_;
   uword attributes_;
-  bool scheduler_;
 };
 
 }  // namespace dart

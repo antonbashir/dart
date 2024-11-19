@@ -652,10 +652,10 @@ intptr_t UntaggedCoroutine::VisitCoroutinePointers(CoroutinePtr raw_obj, ObjectP
   if (!visitor->CanVisitCoroutinePointers(raw_obj)) {
     return Coroutine::InstanceSize();
   }
-  raw_obj.untag()->to_state_.SetSP(raw_obj.untag()->stack_base());
-  raw_obj.untag()->to_state_.SetNativeSP(raw_obj.untag()->native_stack_base());
-  raw_obj.untag()->to_state_.SetAttributes(raw_obj.untag()->attributes());
-  raw_obj.untag()->to_state_.SetIsScheduler(raw_obj == raw_obj.untag()->scheduler());
+  raw_obj->untag()->to_state()->Synchronize(
+      raw_obj.untag()->native_stack_base(),
+      raw_obj.untag()->stack_base(),
+      raw_obj.untag()->attributes());
   visitor->VisitCompressedPointers(raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
   visitor->VisitPointer(&raw_obj.untag()->to_state_.value_);
   if (raw_obj == raw_obj.untag()->scheduler()) {
