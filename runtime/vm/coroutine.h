@@ -36,6 +36,18 @@ class CoroutineLink {
   void SetValue(CoroutinePtr value) { value_ = value; }
 
   DART_FORCE_INLINE
+  void SetNativeSP(uword sp) { native_sp_ = sp; }
+
+  DART_FORCE_INLINE
+  void SetSP(uword sp) { sp_ = sp; }
+
+  DART_FORCE_INLINE
+  void SetAttributes(uword attributes) { attributes_ = attributes; }
+
+  DART_FORCE_INLINE
+  void SetIsScheduler(bool scheduler) { scheduler_ = scheduler; }
+
+  DART_FORCE_INLINE
   static void Remove(CoroutineLink* item) {
     item->previous_->next_ = item->next_;
     item->next_->previous_ = item->previous_;
@@ -61,16 +73,13 @@ class CoroutineLink {
     item->next_->previous_ = item;
   }
 
-  DART_FORCE_INLINE
-  static void ForEach(CoroutineLink* head, std::function<void(CoroutinePtr)> action) {
-    for (auto item = head->First(); item != head; item = item->Next())
-      action(item->Value());
-  }
-
- private:
   CoroutineLink* next_;
   CoroutineLink* previous_;
   CoroutinePtr value_;
+  uword native_sp_;
+  uword sp_;
+  uword attributes_;
+  bool scheduler_;
 };
 
 }  // namespace dart

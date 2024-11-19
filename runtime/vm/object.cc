@@ -26712,14 +26712,17 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto stack_limit = (uword)(stack_end);
   auto stack_base = (uword)(stack_size + (char*)stack_end);
 
-  coroutine.untag()->to_state_.Initialize();
-  coroutine.untag()->to_state_.SetValue(coroutine.ptr());
   coroutine.untag()->stack_size_ = stack_size;
   coroutine.untag()->native_stack_base_ = (uword) nullptr;
   coroutine.untag()->stack_root_ = stack_base;
   coroutine.untag()->stack_base_ = stack_base;
   coroutine.untag()->stack_limit_ = stack_limit;
   coroutine.untag()->overflow_stack_limit_ = stack_limit + CalculateHeadroom(stack_base - stack_limit);
+  coroutine.untag()->to_state_.Initialize();
+  coroutine.untag()->to_state_.SetValue(coroutine.ptr());
+  coroutine.untag()->to_state_.SetSP(coroutine.stack_base());
+  coroutine.untag()->to_state_.SetAttributes(coroutine.attributes());
+  coroutine.untag()->to_state_.SetIsScheduler(false);
   coroutine.untag()->set_trampoline(trampoline);
 
   coroutine.untag()->set_index(registry.Length());

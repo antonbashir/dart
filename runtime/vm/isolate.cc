@@ -1776,6 +1776,8 @@ Isolate::Isolate(IsolateGroup* isolate_group,
   // how the vm_tag (kEmbedderTagId) can be set, these tags need to
   // move to the OSThread structure.
   set_user_tag(UserTags::kDefaultUserTag);
+  active_coroutines()->Initialize();
+  finished_coroutines()->Initialize();
 }
 
 #undef REUSABLE_HANDLE_SCOPE_INIT
@@ -2742,8 +2744,6 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&finalizers_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&saved_coroutine_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&coroutines_registry_));
-  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_coroutines_));
-  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&finished_coroutines_));
 #if !defined(PRODUCT)
   visitor->VisitPointer(
       reinterpret_cast<ObjectPtr*>(&pending_service_extension_calls_));
@@ -2780,14 +2780,6 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
 void Isolate::VisitStackPointers(ObjectPointerVisitor* visitor,
                                  ValidationPolicy validate_frames) {
   if (mutator_thread_ != nullptr) {
-    if (mutator_thread_->has_coroutine()) {
-      auto coroutine = mutator_thread_->coroutine();
-      auto scheduler = coroutine.untag()->scheduler();
-      scheduler->untag()->VisitNativeStack(scheduler, visitor);
-      for (auto item = active_coroutines_.Next(); item != &active_coroutines_; item = item->Next()) {
-        item->Value().untag()->VisitStack(item->Value(), visitor);
-      }
-    }
     mutator_thread_->VisitObjectPointers(visitor, validate_frames);
   }
 }
