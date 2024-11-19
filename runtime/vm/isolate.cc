@@ -13,6 +13,7 @@
 #include "platform/text_buffer.h"
 #include "vm/canonical_tables.h"
 #include "vm/class_finalizer.h"
+#include "vm/class_table.h"
 #include "vm/code_observers.h"
 #include "vm/compiler/jit/compiler.h"
 #include "vm/compiler/runtime_api.h"
@@ -2925,6 +2926,14 @@ void IsolateGroup::VisitObjectPointers(ObjectPointerVisitor* visitor,
   VisitSharedPointers(visitor);
   for (Isolate* isolate : isolates_) {
     isolate->VisitObjectPointers(visitor, validate_frames);
+    if (isolate->coroutines_registry() != Object::null()) {
+      auto coroutines = isolate->coroutines_registry().untag()->data();
+      auto coroutines_count = Smi::Value(isolate->coroutines_registry().untag()->length());
+      for (auto index = 0; index < coroutines_count; index++) {
+        auto item = Coroutine::RawCast(coroutines.untag()->element(index));
+        item->untag()->VisitStack(item, visitor);
+      }
+    }
   }
   VisitStackPointers(visitor, validate_frames);
 }
