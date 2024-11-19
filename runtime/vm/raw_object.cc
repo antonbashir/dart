@@ -666,26 +666,26 @@ intptr_t UntaggedCoroutine::VisitCoroutinePointers(CoroutinePtr raw_obj, ObjectP
 }
 
 void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor) {
-  auto stack = stack_base_;
-  auto attributes = attributes_;
-  Thread* thread = Thread::Current();
-  if ((attributes & (Coroutine::CoroutineAttributes::suspended)) != 0) {
-    const uword fp = *reinterpret_cast<uword*>(stack);
-    StackFrameIterator frames_iterator(
-        fp, ValidationPolicy::kDontValidateFrames, thread,
-        StackFrameIterator::kAllowCrossThreadIteration,
-        StackFrameIterator::kStackOwnerCoroutine);
-    StackFrame* frame = frames_iterator.NextFrame();
-    OS::Print("Stack:\n");
-    while (frame != nullptr) {
-      OS::Print("%s\n", frame->ToCString());
-      frame->VisitObjectPointers(visitor);
-      frame = frames_iterator.NextFrame();
-      if (frame == nullptr || StubCode::InCoroutineStub(frame->GetCallerPc())) {
-        break;
-      }
-    }
-  }
+  // auto stack = stack_base_;
+  // auto attributes = attributes_;
+  // Thread* thread = Thread::Current();
+  // if ((attributes & (Coroutine::CoroutineAttributes::suspended)) != 0) {
+  //   const uword fp = *reinterpret_cast<uword*>(stack);
+  //   StackFrameIterator frames_iterator(
+  //       fp, ValidationPolicy::kDontValidateFrames, thread,
+  //       StackFrameIterator::kAllowCrossThreadIteration,
+  //       StackFrameIterator::kStackOwnerCoroutine);
+  //   StackFrame* frame = frames_iterator.NextFrame();
+  //   OS::Print("Stack:\n");
+  //   while (frame != nullptr) {
+  //     OS::Print("%s\n", frame->ToCString());
+  //     frame->VisitObjectPointers(visitor);
+  //     frame = frames_iterator.NextFrame();
+  //     if (frame == nullptr || StubCode::InCoroutineStub(frame->GetCallerPc())) {
+  //       break;
+  //     }
+  //   }
+  // }
 }
 
 void UntaggedCoroutine::VisitNativeStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor) {

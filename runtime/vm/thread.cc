@@ -1298,86 +1298,10 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantO
       break;
     }
   }
-
-  auto active_coroutines = isolate_->active_coroutines();
-  for (auto item = active_coroutines->Next(); item != active_coroutines; item = item->Next()) {
-    if (item->native_sp_ != 0 && (item->attributes_ & (Coroutine::CoroutineAttributes::suspended | Coroutine::CoroutineAttributes::running)) != 0) {
-      StackFrameIterator scheduler_frames_iterator(*reinterpret_cast<uword*>(item->native_sp_),
-                                                  ValidationPolicy::kDontValidateFrames,
-                                                  this, cross_thread_policy);
-      scan_next_dart_frame = false;
-      for (StackFrame* frame = frames_iterator.NextFrame();
-          frame != nullptr;
-          frame = frames_iterator.NextFrame()) {
-        if (frame->IsExitFrame()) {
-          scan_next_dart_frame = true;
-        } else if (frame->IsEntryFrame()) {
-        } else if (frame->IsStubFrame()) {
-          const uword pc = frame->pc();
-          if (Code::ContainsInstructionAt(
-                  object_store->init_late_static_field_stub(), pc) ||
-              Code::ContainsInstructionAt(
-                  object_store->init_late_final_static_field_stub(), pc) ||
-              Code::ContainsInstructionAt(
-                  object_store->init_late_instance_field_stub(), pc) ||
-              Code::ContainsInstructionAt(
-                  object_store->init_late_final_instance_field_stub(), pc)) {
-            scan_next_dart_frame = true;
-          }
-        } else {
-          ASSERT(frame->IsDartFrame(/*validate=*/false));
-          if (scan_next_dart_frame) {
-            frame->VisitObjectPointers(&visitor);
-          }
-          scan_next_dart_frame = false;
-        }
-        if (frame == nullptr || StubCode::InCoroutineStub(frame->GetCallerPc())) {
-          break;
-        }
-      }
-    }
-  }
-  for (auto item = active_coroutines->Next(); item != active_coroutines; item = item->Next()) {
-    if ((item->attributes_ & Coroutine::CoroutineAttributes::suspended) != 0) {
-      StackFrameIterator coroutine_frames_iterator(*reinterpret_cast<uword*>(item->sp_),
-                                                   ValidationPolicy::kDontValidateFrames,
-                                                   this, cross_thread_policy);
-      scan_next_dart_frame = false;
-      for (StackFrame* frame = frames_iterator.NextFrame();
-           frame != nullptr;
-           frame = frames_iterator.NextFrame()) {
-        if (frame->IsExitFrame()) {
-          scan_next_dart_frame = true;
-        } else if (frame->IsEntryFrame()) {
-        } else if (frame->IsStubFrame()) {
-          const uword pc = frame->pc();
-          if (Code::ContainsInstructionAt(
-                  object_store->init_late_static_field_stub(), pc) ||
-              Code::ContainsInstructionAt(
-                  object_store->init_late_final_static_field_stub(), pc) ||
-              Code::ContainsInstructionAt(
-                  object_store->init_late_instance_field_stub(), pc) ||
-              Code::ContainsInstructionAt(
-                  object_store->init_late_final_instance_field_stub(), pc)) {
-            scan_next_dart_frame = true;
-          }
-        } else {
-          ASSERT(frame->IsDartFrame(/*validate=*/false));
-          if (scan_next_dart_frame) {
-            frame->VisitObjectPointers(&visitor);
-          }
-          scan_next_dart_frame = false;
-        }
-        if (frame == nullptr || StubCode::InCoroutineStub(frame->GetCallerPc())) {
-          break;
-        }
-      }
-    }
-  }
 }
 
 void Thread::DeferredMarkLiveTemporaries() {
-  if (has_coroutine() && isolate_ != nullptr) {
+  if (has_coroutine()) {
     RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantOp::kAddToDeferredMarkingStack);
     return;
   }
@@ -1386,7 +1310,7 @@ void Thread::DeferredMarkLiveTemporaries() {
 }
 
 void Thread::RememberLiveTemporaries() {
-  if (has_coroutine() && isolate_ != nullptr) {
+  if (has_coroutine()) {
     RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantOp::kAddToRememberedSet);
     return;
   }
