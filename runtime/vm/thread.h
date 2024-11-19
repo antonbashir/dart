@@ -1137,8 +1137,8 @@ class Thread : public ThreadState {
   // Visit all object pointers.
   void VisitObjectPointers(ObjectPointerVisitor* visitor,
                            ValidationPolicy validate_frames);
-  void RememberLiveTemporaries();
-  void DeferredMarkLiveTemporaries();
+  void RememberLiveTemporaries(Isolate* isolate);
+  void DeferredMarkLiveTemporaries(Isolate* isolate);
 
   bool IsValidHandle(Dart_Handle object) const;
   bool IsValidLocalHandle(Dart_Handle object) const;
@@ -1187,7 +1187,7 @@ class Thread : public ThreadState {
   friend class RestoreWriteBarrierInvariantVisitor;
   void RestoreWriteBarrierInvariant(RestoreWriteBarrierInvariantOp op);
   
-  void RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantOp op);
+  void RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWriteBarrierInvariantOp op);
 
   // Set the current compiler state and return the previous compiler state.
   CompilerState* SetCompilerState(CompilerState* state) {

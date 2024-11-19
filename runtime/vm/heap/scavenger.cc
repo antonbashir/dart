@@ -1867,7 +1867,7 @@ intptr_t Scavenger::AbandonRemainingTLAB(Thread* thread) {
   intptr_t allocated;
   {
     if (thread->is_marking()) {
-      thread->DeferredMarkLiveTemporaries();
+      thread->DeferredMarkLiveTemporaries(thread->isolate());
     }
     MutexLocker ml(&space_lock_);
     allocated = page->Release(thread);

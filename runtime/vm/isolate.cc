@@ -2794,13 +2794,13 @@ void IsolateGroup::FlushMarkingStacks() {
 
 void Isolate::RememberLiveTemporaries() {
   if (mutator_thread_ != nullptr) {
-    mutator_thread_->RememberLiveTemporaries();
+    mutator_thread_->RememberLiveTemporaries(this);
   }
 }
 
 void Isolate::DeferredMarkLiveTemporaries() {
   if (mutator_thread_ != nullptr) {
-    mutator_thread_->DeferredMarkLiveTemporaries();
+    mutator_thread_->DeferredMarkLiveTemporaries(this);
   }
 }
 

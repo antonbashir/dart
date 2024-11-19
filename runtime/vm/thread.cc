@@ -1263,7 +1263,7 @@ void Thread::RestoreWriteBarrierInvariant(RestoreWriteBarrierInvariantOp op) {
   }
 }
 
-void Thread::RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantOp op) {
+void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWriteBarrierInvariantOp op) {
   ASSERT(IsAtSafepoint() || OwnsGCSafepoint() || this == Thread::Current());
 
   const StackFrameIterator::CrossThreadPolicy cross_thread_policy =
@@ -1330,8 +1330,8 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantO
     }
   }
 
-  auto coroutines = isolate_->coroutines_registry().untag()->data();
-  auto coroutines_count = Smi::Value(isolate_->coroutines_registry().untag()->length());
+  auto coroutines = isolate->coroutines_registry().untag()->data();
+  auto coroutines_count = Smi::Value(isolate->coroutines_registry().untag()->length());
   for (auto index = 0; index < coroutines_count; index++) {
     auto item = Coroutine::RawCast(coroutines.untag()->element(index)).untag();
     if (item->native_stack_base() != 0 && (item->attributes() & (Coroutine::CoroutineAttributes::suspended | Coroutine::CoroutineAttributes::running)) != 0) {
@@ -1425,18 +1425,18 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantO
   }
 }
 
-void Thread::DeferredMarkLiveTemporaries() {
-  if (has_coroutine() && isolate_ != nullptr) {
-    RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantOp::kAddToDeferredMarkingStack);
+void Thread::DeferredMarkLiveTemporaries(Isolate* isolate) {
+  if (has_coroutine()) {
+    RestoreWriteBarrierInvariantCoroutine(isolate, RestoreWriteBarrierInvariantOp::kAddToDeferredMarkingStack);
     return;
   }
   RestoreWriteBarrierInvariant(
       RestoreWriteBarrierInvariantOp::kAddToDeferredMarkingStack);
 }
 
-void Thread::RememberLiveTemporaries() {
-  if (has_coroutine() && isolate_ != nullptr) {
-    RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantOp::kAddToRememberedSet);
+void Thread::RememberLiveTemporaries(Isolate* isolate) {
+  if (has_coroutine()) {
+    RestoreWriteBarrierInvariantCoroutine(isolate, RestoreWriteBarrierInvariantOp::kAddToRememberedSet);
     return;
   }
   RestoreWriteBarrierInvariant(
