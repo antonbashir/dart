@@ -649,46 +649,49 @@ intptr_t UntaggedSuspendState::VisitSuspendStatePointers(
 }
 
 intptr_t UntaggedCoroutine::VisitCoroutinePointers(CoroutinePtr raw_obj, ObjectPointerVisitor* visitor) {
-  if (!visitor->CanVisitCoroutinePointers(raw_obj)) {
-    return Coroutine::InstanceSize();
-  }
-  raw_obj->untag()->to_state()->Synchronize(
-      raw_obj.untag()->native_stack_base(),
-      raw_obj.untag()->stack_base(),
-      raw_obj.untag()->attributes());
+//  raw_obj->untag()->to_state()->Synchronize(
+//      raw_obj == raw_obj.untag()->scheduler() ? raw_obj.untag()->native_stack_base() : 0,
+//      raw_obj.untag()->stack_base(),
+//      raw_obj.untag()->attributes());
+//  OS::Print("sync: %p\n", (void*)raw_obj.untag()->native_stack_base());
   visitor->VisitCompressedPointers(raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
-  visitor->VisitPointer(&raw_obj.untag()->to_state_.value_);
-  if (raw_obj == raw_obj.untag()->scheduler()) {
-    raw_obj->untag()->VisitNativeStack(raw_obj, visitor);
-  }
-  raw_obj->untag()->VisitStack(raw_obj, visitor);
+  // if (raw_obj == raw_obj.untag()->scheduler()) {
+  //   raw_obj->untag()->VisitNativeStack(raw_obj, visitor);
+  // }
+  // raw_obj->untag()->VisitStack(raw_obj, visitor);
   return Coroutine::InstanceSize();
 }
 
 void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor) {
-  // auto stack = stack_base_;
-  // auto attributes = attributes_;
-  // Thread* thread = Thread::Current();
-  // if ((attributes & (Coroutine::CoroutineAttributes::suspended)) != 0) {
-  //   const uword fp = *reinterpret_cast<uword*>(stack);
-  //   StackFrameIterator frames_iterator(
-  //       fp, ValidationPolicy::kDontValidateFrames, thread,
-  //       StackFrameIterator::kAllowCrossThreadIteration,
-  //       StackFrameIterator::kStackOwnerCoroutine);
-  //   StackFrame* frame = frames_iterator.NextFrame();
-  //   OS::Print("Stack:\n");
-  //   while (frame != nullptr) {
-  //     OS::Print("%s\n", frame->ToCString());
-  //     frame->VisitObjectPointers(visitor);
-  //     frame = frames_iterator.NextFrame();
-  //     if (frame == nullptr || StubCode::InCoroutineStub(frame->GetCallerPc())) {
-  //       break;
-  //     }
-  //   }
-  // }
+  if (!visitor->CanVisitCoroutinePointers(coroutine)) {
+    return;
+  }
+  auto stack = stack_base_;
+  auto attributes = attributes_;
+  Thread* thread = Thread::Current();
+  if ((attributes & (Coroutine::CoroutineAttributes::suspended)) != 0) {
+    const uword fp = *reinterpret_cast<uword*>(stack);
+    StackFrameIterator frames_iterator(
+        fp, ValidationPolicy::kDontValidateFrames, thread,
+        StackFrameIterator::kAllowCrossThreadIteration,
+        StackFrameIterator::kStackOwnerCoroutine);
+    StackFrame* frame = frames_iterator.NextFrame();
+    OS::Print("Stack:\n");
+    while (frame != nullptr) {
+      OS::Print("%s\n", frame->ToCString());
+      frame->VisitObjectPointers(visitor);
+      frame = frames_iterator.NextFrame();
+      if (frame == nullptr || StubCode::InCoroutineStub(frame->GetCallerPc())) {
+        break;
+      }
+    }
+  }
 }
 
 void UntaggedCoroutine::VisitNativeStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor) {
+  if (!visitor->CanVisitCoroutinePointers(coroutine)) {
+    return;
+  }
   auto native_stack = native_stack_base_;
   auto attributes = attributes_;
   Thread* thread = Thread::Current();

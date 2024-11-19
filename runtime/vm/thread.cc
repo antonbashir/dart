@@ -1118,6 +1118,16 @@ void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
           break;
         }
       }
+      if (isolate_ != nullptr && isolate_->coroutines_registry_ != nullptr) {
+        auto coroutines = isolate_->coroutines_registry().untag()->data();
+        auto coroutines_count = Smi::Value(isolate_->coroutines_registry().untag()->length());
+        auto scheduler = Coroutine::RawCast(coroutines.untag()->element(0)).untag()->scheduler();
+        scheduler.untag()->VisitNativeStack(scheduler, visitor);
+        for (auto index = 0; index < coroutines_count; index++) {
+          auto item = Coroutine::RawCast(coroutines.untag()->element(index));
+          item->untag()->VisitStack(item, visitor);
+        }
+      }
     } else {
       while (frame != nullptr) {
         frame->VisitObjectPointers(visitor);
@@ -1298,10 +1308,88 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantO
       break;
     }
   }
+
+  auto coroutines = isolate_->coroutines_registry().untag()->data();
+  auto coroutines_count = Smi::Value(isolate_->coroutines_registry().untag()->length());
+  auto scheduler = Coroutine::RawCast(coroutines.untag()->element(0)).untag()->scheduler();
+  if ((scheduler.untag()->attributes() & (Coroutine::CoroutineAttributes::suspended | Coroutine::CoroutineAttributes::running)) != 0) {
+    OS::Print("item->native_sp_: %p\n", (void*)scheduler.untag()->native_stack_base());
+    StackFrameIterator scheduler_frames_iterator(*reinterpret_cast<uword*>(scheduler.untag()->native_stack_base()),
+                                                 ValidationPolicy::kDontValidateFrames,
+                                                 this, cross_thread_policy);
+    scan_next_dart_frame = false;
+    for (StackFrame* frame = frames_iterator.NextFrame();
+         frame != nullptr;
+         frame = frames_iterator.NextFrame()) {
+      if (frame->IsExitFrame()) {
+        scan_next_dart_frame = true;
+      } else if (frame->IsEntryFrame()) {
+      } else if (frame->IsStubFrame()) {
+        const uword pc = frame->pc();
+        if (Code::ContainsInstructionAt(
+                object_store->init_late_static_field_stub(), pc) ||
+            Code::ContainsInstructionAt(
+                object_store->init_late_final_static_field_stub(), pc) ||
+            Code::ContainsInstructionAt(
+                object_store->init_late_instance_field_stub(), pc) ||
+            Code::ContainsInstructionAt(
+                object_store->init_late_final_instance_field_stub(), pc)) {
+          scan_next_dart_frame = true;
+        }
+      } else {
+        ASSERT(frame->IsDartFrame(/*validate=*/false));
+        if (scan_next_dart_frame) {
+          frame->VisitObjectPointers(&visitor);
+        }
+        scan_next_dart_frame = false;
+      }
+      if (frame == nullptr || StubCode::InCoroutineStub(frame->GetCallerPc())) {
+        break;
+      }
+    }
+  }
+  for (auto index = 0; index < coroutines_count; index++) {
+    auto item = Coroutine::RawCast(coroutines.untag()->element(index)).untag();
+    if ((item->attributes() & Coroutine::CoroutineAttributes::suspended) != 0) {
+      StackFrameIterator coroutine_frames_iterator(*reinterpret_cast<uword*>(item->stack_base()),
+                                                   ValidationPolicy::kDontValidateFrames,
+                                                   this, cross_thread_policy);
+      scan_next_dart_frame = false;
+      for (StackFrame* frame = frames_iterator.NextFrame();
+           frame != nullptr;
+           frame = frames_iterator.NextFrame()) {
+        if (frame->IsExitFrame()) {
+          scan_next_dart_frame = true;
+        } else if (frame->IsEntryFrame()) {
+        } else if (frame->IsStubFrame()) {
+          const uword pc = frame->pc();
+          if (Code::ContainsInstructionAt(
+                  object_store->init_late_static_field_stub(), pc) ||
+              Code::ContainsInstructionAt(
+                  object_store->init_late_final_static_field_stub(), pc) ||
+              Code::ContainsInstructionAt(
+                  object_store->init_late_instance_field_stub(), pc) ||
+              Code::ContainsInstructionAt(
+                  object_store->init_late_final_instance_field_stub(), pc)) {
+            scan_next_dart_frame = true;
+          }
+        } else {
+          ASSERT(frame->IsDartFrame(/*validate=*/false));
+          if (scan_next_dart_frame) {
+            frame->VisitObjectPointers(&visitor);
+          }
+          scan_next_dart_frame = false;
+        }
+        if (frame == nullptr || StubCode::InCoroutineStub(frame->GetCallerPc())) {
+          break;
+        }
+      }
+    }
+  }
 }
 
 void Thread::DeferredMarkLiveTemporaries() {
-  if (has_coroutine()) {
+  if (has_coroutine() && isolate_ != nullptr) {
     RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantOp::kAddToDeferredMarkingStack);
     return;
   }
@@ -1310,7 +1398,7 @@ void Thread::DeferredMarkLiveTemporaries() {
 }
 
 void Thread::RememberLiveTemporaries() {
-  if (has_coroutine()) {
+  if (has_coroutine() && isolate_ != nullptr) {
     RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantOp::kAddToRememberedSet);
     return;
   }
