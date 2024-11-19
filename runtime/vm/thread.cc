@@ -1061,8 +1061,7 @@ void Thread::ClearReusableHandles() {
 #undef CLEAR_REUSABLE_HANDLE
 }
 
-void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
-                                 ValidationPolicy validation_policy) {
+void Thread::VisitObjectPointers(Isolate* isolate, ObjectPointerVisitor* visitor, ValidationPolicy validation_policy) {
   ASSERT(visitor != nullptr);
 
   if (zone() != nullptr) {
@@ -1119,14 +1118,12 @@ void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
           break;
         }
       }
-      if (isolate_ != nullptr && isolate_->coroutines_registry_ != nullptr) {
-        auto coroutines = isolate_->coroutines_registry().untag()->data();
-        auto coroutines_count = Smi::Value(isolate_->coroutines_registry().untag()->length());
-        for (auto index = 0; index < coroutines_count; index++) {
-          auto item = Coroutine::RawCast(coroutines.untag()->element(index));
-          item->untag()->VisitStack(item, visitor);
-        }
-      }
+      //auto coroutines = isolate->coroutines_registry().untag()->data();
+      //auto coroutines_count = Smi::Value(isolate->coroutines_registry().untag()->length());
+      //for (auto index = 0; index < coroutines_count; index++) {
+      //  auto item = Coroutine::RawCast(coroutines.untag()->element(index));
+      //  item->untag()->VisitStack(item, visitor);
+      //}
     } else {
       while (frame != nullptr) {
         frame->VisitObjectPointers(visitor);

@@ -1135,7 +1135,7 @@ class Thread : public ThreadState {
   Thread* next() const { return next_; }
 
   // Visit all object pointers.
-  void VisitObjectPointers(ObjectPointerVisitor* visitor,
+  void VisitObjectPointers(Isolate* isolate, ObjectPointerVisitor* visitor,
                            ValidationPolicy validate_frames);
   void RememberLiveTemporaries(Isolate* isolate);
   void DeferredMarkLiveTemporaries(Isolate* isolate);

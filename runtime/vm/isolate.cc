@@ -2780,7 +2780,7 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
 void Isolate::VisitStackPointers(ObjectPointerVisitor* visitor,
                                  ValidationPolicy validate_frames) {
   if (mutator_thread_ != nullptr) {
-    mutator_thread_->VisitObjectPointers(visitor, validate_frames);
+    mutator_thread_->VisitObjectPointers(this, visitor, validate_frames);
   }
 }
 
