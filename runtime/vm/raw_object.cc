@@ -649,22 +649,16 @@ intptr_t UntaggedSuspendState::VisitSuspendStatePointers(
 }
 
 intptr_t UntaggedCoroutine::VisitCoroutinePointers(CoroutinePtr raw_obj, ObjectPointerVisitor* visitor) {
-//  raw_obj->untag()->to_state()->Synchronize(
-//      raw_obj == raw_obj.untag()->scheduler() ? raw_obj.untag()->native_stack_base() : 0,
-//      raw_obj.untag()->stack_base(),
-//      raw_obj.untag()->attributes());
-//  OS::Print("sync: %p\n", (void*)raw_obj.untag()->native_stack_base());
   visitor->VisitCompressedPointers(raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
-  // if (raw_obj == raw_obj.untag()->scheduler()) {
-  //   raw_obj->untag()->VisitNativeStack(raw_obj, visitor);
-  // }
-  // raw_obj->untag()->VisitStack(raw_obj, visitor);
   return Coroutine::InstanceSize();
 }
 
 void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor) {
   if (!visitor->CanVisitCoroutinePointers(coroutine)) {
     return;
+  }
+  if (native_stack_base_ != 0) {
+    VisitNativeStack(coroutine, visitor);
   }
   auto stack = stack_base_;
   auto attributes = attributes_;
@@ -681,7 +675,8 @@ void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor*
       OS::Print("%s\n", frame->ToCString());
       frame->VisitObjectPointers(visitor);
       frame = frames_iterator.NextFrame();
-      if (frame == nullptr || StubCode::InCoroutineStub(frame->GetCallerPc())) {
+      if (frame != nullptr && StubCode::InCoroutineStub(frame->GetCallerPc())) {
+        frame->VisitObjectPointers(visitor);
         break;
       }
     }
@@ -707,9 +702,6 @@ void UntaggedCoroutine::VisitNativeStack(CoroutinePtr coroutine, ObjectPointerVi
       OS::Print("%s\n", frame->ToCString());
       frame->VisitObjectPointers(visitor);
       frame = frames_iterator.NextFrame();
-      if (frame == nullptr || StubCode::InCoroutineStub(frame->GetCallerPc())) {
-        break;
-      }
     }
   }
 }
