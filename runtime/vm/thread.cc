@@ -1276,9 +1276,7 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantO
   ObjectStore* object_store = isolate_group()->object_store();
 
   bool scan_next_dart_frame = false;
-  for (StackFrame* frame = frames_iterator.NextFrame();
-       frame != nullptr;
-       frame = frames_iterator.NextFrame()) {
+  for (StackFrame* frame = frames_iterator.NextFrame(); frame != nullptr;) {
     if (frame->IsExitFrame()) {
       scan_next_dart_frame = true;
     } else if (frame->IsEntryFrame()) {
@@ -1303,8 +1301,31 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantO
       scan_next_dart_frame = false;
     }
 
+    frame = frames_iterator.NextFrame();
     if (frame != nullptr && StubCode::InCoroutineStub(frame->GetCallerPc())) {
-      frame->VisitObjectPointers(&visitor);
+      if (frame->IsExitFrame()) {
+        scan_next_dart_frame = true;
+      } else if (frame->IsEntryFrame()) {
+        /* Continue searching. */
+      } else if (frame->IsStubFrame()) {
+        const uword pc = frame->pc();
+        if (Code::ContainsInstructionAt(
+                object_store->init_late_static_field_stub(), pc) ||
+            Code::ContainsInstructionAt(
+                object_store->init_late_final_static_field_stub(), pc) ||
+            Code::ContainsInstructionAt(
+                object_store->init_late_instance_field_stub(), pc) ||
+            Code::ContainsInstructionAt(
+                object_store->init_late_final_instance_field_stub(), pc)) {
+          scan_next_dart_frame = true;
+        }
+      } else {
+        ASSERT(frame->IsDartFrame(/*validate=*/false));
+        if (scan_next_dart_frame) {
+          frame->VisitObjectPointers(&visitor);
+        }
+        scan_next_dart_frame = false;
+      }
       break;
     }
   }
@@ -1319,9 +1340,7 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantO
                                                    ValidationPolicy::kDontValidateFrames,
                                                    this, cross_thread_policy);
       scan_next_dart_frame = false;
-      for (StackFrame* frame = frames_iterator.NextFrame();
-           frame != nullptr;
-           frame = frames_iterator.NextFrame()) {
+      for (StackFrame* frame = frames_iterator.NextFrame(); frame != nullptr; frame = frames_iterator.NextFrame()) {
         if (frame->IsExitFrame()) {
           scan_next_dart_frame = true;
         } else if (frame->IsEntryFrame()) {
@@ -1351,9 +1370,7 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantO
                                                    ValidationPolicy::kDontValidateFrames,
                                                    this, cross_thread_policy);
       scan_next_dart_frame = false;
-      for (StackFrame* frame = frames_iterator.NextFrame();
-           frame != nullptr;
-           frame = frames_iterator.NextFrame()) {
+      for (StackFrame* frame = frames_iterator.NextFrame(); frame != nullptr;) {
         if (frame->IsExitFrame()) {
           scan_next_dart_frame = true;
         } else if (frame->IsEntryFrame()) {
@@ -1376,8 +1393,31 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(RestoreWriteBarrierInvariantO
           }
           scan_next_dart_frame = false;
         }
+        frame = frames_iterator.NextFrame();
         if (frame != nullptr && StubCode::InCoroutineStub(frame->GetCallerPc())) {
-          frame->VisitObjectPointers(&visitor);
+          if (frame->IsExitFrame()) {
+            scan_next_dart_frame = true;
+          } else if (frame->IsEntryFrame()) {
+            /* Continue searching. */
+          } else if (frame->IsStubFrame()) {
+            const uword pc = frame->pc();
+            if (Code::ContainsInstructionAt(
+                    object_store->init_late_static_field_stub(), pc) ||
+                Code::ContainsInstructionAt(
+                    object_store->init_late_final_static_field_stub(), pc) ||
+                Code::ContainsInstructionAt(
+                    object_store->init_late_instance_field_stub(), pc) ||
+                Code::ContainsInstructionAt(
+                    object_store->init_late_final_instance_field_stub(), pc)) {
+              scan_next_dart_frame = true;
+            }
+          } else {
+            ASSERT(frame->IsDartFrame(/*validate=*/false));
+            if (scan_next_dart_frame) {
+              frame->VisitObjectPointers(&visitor);
+            }
+            scan_next_dart_frame = false;
+          }
           break;
         }
       }
