@@ -222,7 +222,7 @@ constexpr bool FLAG_support_il_printer = false;
   P(use_field_guards, bool, true, "Use field guards and track field types")    \
   C(use_osr, false, true, bool, true, "Use OSR")                               \
   P(use_slow_path, bool, false, "Whether to avoid inlined fast paths.")        \
-  P(verbose_gc, bool, true, "Enables verbose GC.")                            \
+  P(verbose_gc, bool, false, "Enables verbose GC.")                            \
   P(verbose_gc_hdr, int, 40, "Print verbose GC header interval.")              \
   R(verify_after_gc, false, bool, false,                                       \
     "Enables heap verification after GC.")                                     \

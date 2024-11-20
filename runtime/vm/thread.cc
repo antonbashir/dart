@@ -1163,7 +1163,7 @@ void Thread::VisitObjectPointersCoroutine(Isolate* isolate, ObjectPointerVisitor
     while (frame != nullptr) {
       OS::Print("Thread::VisitObjectPointersCoroutine: %s\n", frame->ToCString());
       frame->VisitObjectPointers(visitor);
-      if (StubCode::InCoroutineStub(frame->GetCallerPc())) break;  //frames_iterator.NextFrame();
+      if (StubCode::InCoroutineStub(frame->GetCallerPc())) break;
       frame = frames_iterator.NextFrame();
     }
     auto coroutines = isolate->coroutines_registry().untag()->data();
@@ -1340,7 +1340,7 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
       scan_next_dart_frame = false;
     }
 
-    //if (StubCode::InCoroutineStub(frame->GetCallerPc())) thread_frames_iterator.NextFrame();
+    if (StubCode::InCoroutineStub(frame->GetCallerPc())) break;
     frame = thread_frames_iterator.NextFrame();
   }
 
@@ -1413,7 +1413,7 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
           scan_next_dart_frame = false;
         }
 
-        //if (StubCode::InCoroutineStub(frame->GetCallerPc())) break;
+        if (StubCode::InCoroutineStub(frame->GetCallerPc())) break;
         frame = coroutine_frames_iterator.NextFrame();
       }
     }
