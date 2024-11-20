@@ -2929,6 +2929,14 @@ void IsolateGroup::VisitObjectPointers(ObjectPointerVisitor* visitor,
                                        ValidationPolicy validate_frames) {
   VisitSharedPointers(visitor);
   for (Isolate* isolate : isolates_) {
+    // if (isolate->mutator_thread_ != nullptr && isolate->coroutines_registry() != Object::null()) {
+    //   auto coroutines = isolate->coroutines_registry().untag()->data();
+    //   auto coroutines_count = Smi::Value(isolate->coroutines_registry().untag()->length());
+    //   for (auto index = 0; index < coroutines_count; index++) {
+    //     auto item = Coroutine::RawCast(coroutines.untag()->element(index));
+    //     item->untag()->VisitStack(item, visitor);
+    //   }
+    // }
     isolate->VisitObjectPointers(visitor, validate_frames);
   }
   VisitStackPointers(visitor, validate_frames);
@@ -2987,6 +2995,17 @@ void IsolateGroup::VisitStackPointers(ObjectPointerVisitor* visitor,
                                       ValidationPolicy validate_frames) {
   visitor->set_gc_root_type("stack");
 
+  // for (Isolate* isolate : isolates_) {
+  //   if (isolate->mutator_thread_ != nullptr && isolate->coroutines_registry() != Object::null()) {
+  //     auto coroutines = isolate->coroutines_registry().untag()->data();
+  //     volatile auto coroutines_count = Smi::Value(isolate->coroutines_registry().untag()->length());
+  //     for (auto index = 0; index < coroutines_count; index++) {
+  //       auto item = Coroutine::RawCast(coroutines.untag()->element(index));
+  //       item->untag()->VisitStack(item, visitor);
+  //     }
+  //   }
+  // }
+
   // Visit objects in all threads (e.g. Dart stack, handles in zones), except
   // for the mutator threads themselves.
   thread_registry()->VisitObjectPointers(this, visitor, validate_frames);
@@ -2997,16 +3016,6 @@ void IsolateGroup::VisitStackPointers(ObjectPointerVisitor* visitor,
     isolate->VisitStackPointers(visitor, validate_frames);
   }
 
-  for (Isolate* isolate : isolates_) {
-    if (isolate->mutator_thread_ != nullptr && isolate->coroutines_registry() != Object::null()) {
-      auto coroutines = isolate->coroutines_registry().untag()->data();
-      auto coroutines_count = Smi::Value(isolate->coroutines_registry().untag()->length());
-      for (auto index = 0; index < coroutines_count; index++) {
-        auto item = Coroutine::RawCast(coroutines.untag()->element(index));
-        item->untag()->VisitStack(item, visitor);
-      }
-    }
-  }
 
   visitor->clear_gc_root_type();
 }
