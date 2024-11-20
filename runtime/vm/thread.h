@@ -1135,8 +1135,9 @@ class Thread : public ThreadState {
   Thread* next() const { return next_; }
 
   // Visit all object pointers.
-  void VisitObjectPointers(Isolate* isolate, ObjectPointerVisitor* visitor,
+  void VisitObjectPointers(ObjectPointerVisitor* visitor,
                            ValidationPolicy validate_frames);
+
   void RememberLiveTemporaries(Isolate* isolate);
   void DeferredMarkLiveTemporaries(Isolate* isolate);
 
@@ -1188,6 +1189,8 @@ class Thread : public ThreadState {
   void RestoreWriteBarrierInvariant(RestoreWriteBarrierInvariantOp op);
   
   void RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWriteBarrierInvariantOp op);
+
+  void VisitObjectPointersCoroutine(Isolate* isolate, ObjectPointerVisitor* visitor, ValidationPolicy validate_frames);
 
   // Set the current compiler state and return the previous compiler state.
   CompilerState* SetCompilerState(CompilerState* state) {

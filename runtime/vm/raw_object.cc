@@ -670,15 +670,11 @@ void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor*
         StackFrameIterator::kAllowCrossThreadIteration,
         StackFrameIterator::kStackOwnerCoroutine);
     StackFrame* frame = frames_iterator.NextFrame();
-    OS::Print("Stack:\n");
     while (frame != nullptr) {
-      OS::Print("%s\n", frame->ToCString());
+      OS::Print("UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
       frame->VisitObjectPointers(visitor);
+      if (StubCode::InCoroutineStub(frame->GetCallerPc())) break;
       frame = frames_iterator.NextFrame();
-      if (frame != nullptr && StubCode::InCoroutineStub(frame->GetCallerPc())) {
-        frame->VisitObjectPointers(visitor);
-        break;
-      }
     }
   }
 }
@@ -697,9 +693,8 @@ void UntaggedCoroutine::VisitNativeStack(CoroutinePtr coroutine, ObjectPointerVi
         StackFrameIterator::kAllowCrossThreadIteration,
         StackFrameIterator::kStackOwnerCoroutine);
     StackFrame* frame = frames_iterator.NextFrame();
-    OS::Print("Native Stack:\n");
     while (frame != nullptr) {
-      OS::Print("%s\n", frame->ToCString());
+      OS::Print("UntaggedCoroutine::VisitNativeStack: %s\n", frame->ToCString());
       frame->VisitObjectPointers(visitor);
       frame = frames_iterator.NextFrame();
     }

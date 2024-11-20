@@ -1061,7 +1061,7 @@ void Thread::ClearReusableHandles() {
 #undef CLEAR_REUSABLE_HANDLE
 }
 
-void Thread::VisitObjectPointers(Isolate* isolate, ObjectPointerVisitor* visitor, ValidationPolicy validation_policy) {
+void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor, ValidationPolicy validation_policy) {
   ASSERT(visitor != nullptr);
 
   if (zone() != nullptr) {
@@ -1105,23 +1105,67 @@ void Thread::VisitObjectPointers(Isolate* isolate, ObjectPointerVisitor* visitor
                                        this, cross_thread_policy);
     StackFrame* frame = frames_iterator.NextFrame();
     visitor->set_gc_root_type("frame");
-    if (has_coroutine()) {
-      OS::Print("Thread Stack:\n");
-      while (frame != nullptr) {
-        OS::Print("coro sp: %p\n", (void*)coroutine_.untag()->stack_base());
-        OS::Print("1: %s\n", frame->ToCString());
+    while (frame != nullptr) {
+      frame->VisitObjectPointers(visitor);
+      frame = frames_iterator.NextFrame();
+    }
+    visitor->clear_gc_root_type();
+  } else {
+    // We are not on the mutator thread.
+    RELEASE_ASSERT(top_exit_frame_info() == 0);
+  }
+}
+
+void Thread::VisitObjectPointersCoroutine(Isolate* isolate, ObjectPointerVisitor* visitor, ValidationPolicy validation_policy) {
+  ASSERT(visitor != nullptr);
+
+  if (zone() != nullptr) {
+    zone()->VisitObjectPointers(visitor);
+  }
+
+  // Visit objects in thread specific handles area.
+  reusable_handles_.VisitObjectPointers(visitor);
+
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&global_object_pool_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_exception_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&coroutine_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&disabled_coroutine_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_stacktrace_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&sticky_error_));
+
+  // Visit the api local scope as it has all the api local handles.
+  ApiLocalScope* scope = api_top_scope_;
+  while (scope != nullptr) {
+    scope->local_handles()->VisitObjectPointers(visitor);
+    scope = scope->previous();
+  }
+
+  // Only the mutator thread can run Dart code.
+  if (IsDartMutatorThread()) {
+    // The MarkTask, which calls this method, can run on a different thread.  We
+    // therefore assume the mutator is at a safepoint and we can iterate its
+    // stack.
+    // TODO(vm-team): It would be beneficial to be able to ask the mutator
+    // thread whether it is in fact blocked at the moment (at a "safepoint") so
+    // we can safely iterate its stack.
+    //
+    // Unfortunately we cannot use `this->IsAtSafepoint()` here because that
+    // will return `false` even though the mutator thread is waiting for mark
+    // tasks (which iterate its stack) to finish.
+    const StackFrameIterator::CrossThreadPolicy cross_thread_policy =
+        StackFrameIterator::kAllowCrossThreadIteration;
+
+    // Iterate over all the stack frames and visit objects on the stack.
+    StackFrameIterator frames_iterator(top_exit_frame_info(), validation_policy,
+                                       this, cross_thread_policy);
+    StackFrame* frame = frames_iterator.NextFrame();
+    visitor->set_gc_root_type("frame");
+    while (frame != nullptr) {
+      frame->VisitObjectPointers(visitor);
+      frame = frames_iterator.NextFrame();
+      if (frame != nullptr && StubCode::InCoroutineStub(frame->GetCallerPc())) {
         frame->VisitObjectPointers(visitor);
-        frame = frames_iterator.NextFrame();
-        OS::Print("2: %s\n", frame->ToCString());
-        if (frame != nullptr && StubCode::InCoroutineStub(frame->GetCallerPc())) {
-          frame->VisitObjectPointers(visitor);
-          break;
-        }
-      }
-    } else {
-      while (frame != nullptr) {
-        frame->VisitObjectPointers(visitor);
-        frame = frames_iterator.NextFrame();
+        break;
       }
     }
     visitor->clear_gc_root_type();
@@ -1271,7 +1315,6 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
     if (frame->IsExitFrame()) {
       scan_next_dart_frame = true;
     } else if (frame->IsEntryFrame()) {
-      /* Continue searching. */
     } else if (frame->IsStubFrame()) {
       const uword pc = frame->pc();
       if (Code::ContainsInstructionAt(
@@ -1285,48 +1328,24 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
         scan_next_dart_frame = true;
       }
     } else {
-      ASSERT(frame->IsDartFrame(/*validate=*/false));
+      ASSERT(frame->IsDartFrame(false));
       if (scan_next_dart_frame) {
+        OS::Print("RestoreWriteBarrierInvariantCoroutine 1: %s\n", frame->ToCString());
         frame->VisitObjectPointers(&visitor);
       }
       scan_next_dart_frame = false;
     }
 
+    if (StubCode::InCoroutineStub(frame->GetCallerPc())) break;
     frame = frames_iterator.NextFrame();
-    if (frame != nullptr && StubCode::InCoroutineStub(frame->GetCallerPc())) {
-      if (frame->IsExitFrame()) {
-        scan_next_dart_frame = true;
-      } else if (frame->IsEntryFrame()) {
-        /* Continue searching. */
-      } else if (frame->IsStubFrame()) {
-        const uword pc = frame->pc();
-        if (Code::ContainsInstructionAt(
-                object_store->init_late_static_field_stub(), pc) ||
-            Code::ContainsInstructionAt(
-                object_store->init_late_final_static_field_stub(), pc) ||
-            Code::ContainsInstructionAt(
-                object_store->init_late_instance_field_stub(), pc) ||
-            Code::ContainsInstructionAt(
-                object_store->init_late_final_instance_field_stub(), pc)) {
-          scan_next_dart_frame = true;
-        }
-      } else {
-        ASSERT(frame->IsDartFrame(/*validate=*/false));
-        if (scan_next_dart_frame) {
-          frame->VisitObjectPointers(&visitor);
-        }
-        scan_next_dart_frame = false;
-      }
-      break;
-    }
   }
 
   auto coroutines = isolate->coroutines_registry().untag()->data();
   auto coroutines_count = Smi::Value(isolate->coroutines_registry().untag()->length());
   for (auto index = 0; index < coroutines_count; index++) {
     auto item = Coroutine::RawCast(coroutines.untag()->element(index)).untag();
-    if (item->native_stack_base() != 0 && (item->attributes() & (Coroutine::CoroutineAttributes::suspended | Coroutine::CoroutineAttributes::running)) != 0) {
-      OS::Print("item->native_sp_: %p\n", (void*)item->native_stack_base());
+    if (item->native_stack_base() != 0 &&
+        (item->attributes() & (Coroutine::CoroutineAttributes::suspended | Coroutine::CoroutineAttributes::running)) != 0) {
       StackFrameIterator scheduler_frames_iterator(*reinterpret_cast<uword*>(item->native_stack_base()),
                                                    ValidationPolicy::kDontValidateFrames,
                                                    this, cross_thread_policy);
@@ -1348,14 +1367,16 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
             scan_next_dart_frame = true;
           }
         } else {
-          ASSERT(frame->IsDartFrame(/*validate=*/false));
+          ASSERT(frame->IsDartFrame(false));
           if (scan_next_dart_frame) {
+            OS::Print("RestoreWriteBarrierInvariantCoroutine 2: %s\n", frame->ToCString());
             frame->VisitObjectPointers(&visitor);
           }
           scan_next_dart_frame = false;
         }
       }
     }
+
     if ((item->attributes() & Coroutine::CoroutineAttributes::suspended) != 0) {
       StackFrameIterator coroutine_frames_iterator(*reinterpret_cast<uword*>(item->stack_base()),
                                                    ValidationPolicy::kDontValidateFrames,
@@ -1378,39 +1399,16 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
             scan_next_dart_frame = true;
           }
         } else {
-          ASSERT(frame->IsDartFrame(/*validate=*/false));
+          ASSERT(frame->IsDartFrame(false));
           if (scan_next_dart_frame) {
+            OS::Print("RestoreWriteBarrierInvariantCoroutine 3: %s\n", frame->ToCString());
             frame->VisitObjectPointers(&visitor);
           }
           scan_next_dart_frame = false;
         }
+
+        if (StubCode::InCoroutineStub(frame->GetCallerPc())) break;
         frame = frames_iterator.NextFrame();
-        if (frame != nullptr && StubCode::InCoroutineStub(frame->GetCallerPc())) {
-          if (frame->IsExitFrame()) {
-            scan_next_dart_frame = true;
-          } else if (frame->IsEntryFrame()) {
-            /* Continue searching. */
-          } else if (frame->IsStubFrame()) {
-            const uword pc = frame->pc();
-            if (Code::ContainsInstructionAt(
-                    object_store->init_late_static_field_stub(), pc) ||
-                Code::ContainsInstructionAt(
-                    object_store->init_late_final_static_field_stub(), pc) ||
-                Code::ContainsInstructionAt(
-                    object_store->init_late_instance_field_stub(), pc) ||
-                Code::ContainsInstructionAt(
-                    object_store->init_late_final_instance_field_stub(), pc)) {
-              scan_next_dart_frame = true;
-            }
-          } else {
-            ASSERT(frame->IsDartFrame(/*validate=*/false));
-            if (scan_next_dart_frame) {
-              frame->VisitObjectPointers(&visitor);
-            }
-            scan_next_dart_frame = false;
-          }
-          break;
-        }
       }
     }
   }

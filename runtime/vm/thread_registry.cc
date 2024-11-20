@@ -52,7 +52,7 @@ void ThreadRegistry::VisitObjectPointers(
       // The mutator thread is visited by the isolate itself (see
       // [IsolateGroup::VisitStackPointers]).
       if (!thread->IsDartMutatorThread()) {
-        thread->VisitObjectPointers(nullptr, visitor, validate_frames);
+        thread->VisitObjectPointers(visitor, validate_frames);
       }
     }
     thread = thread->next_;

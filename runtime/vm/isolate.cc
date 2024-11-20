@@ -2781,7 +2781,11 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
 void Isolate::VisitStackPointers(ObjectPointerVisitor* visitor,
                                  ValidationPolicy validate_frames) {
   if (mutator_thread_ != nullptr) {
-    mutator_thread_->VisitObjectPointers(this, visitor, validate_frames);
+    if (mutator_thread_->has_coroutine()) {
+      mutator_thread_->VisitObjectPointersCoroutine(this, visitor, validate_frames);
+      return;
+    }
+    mutator_thread_->VisitObjectPointers(visitor, validate_frames);
   }
 }
 
@@ -2926,14 +2930,6 @@ void IsolateGroup::VisitObjectPointers(ObjectPointerVisitor* visitor,
   VisitSharedPointers(visitor);
   for (Isolate* isolate : isolates_) {
     isolate->VisitObjectPointers(visitor, validate_frames);
-    if (isolate->coroutines_registry() != Object::null()) {
-      auto coroutines = isolate->coroutines_registry().untag()->data();
-      auto coroutines_count = Smi::Value(isolate->coroutines_registry().untag()->length());
-      for (auto index = 0; index < coroutines_count; index++) {
-        auto item = Coroutine::RawCast(coroutines.untag()->element(index));
-        item->untag()->VisitStack(item, visitor);
-      }
-    }
   }
   VisitStackPointers(visitor, validate_frames);
 }
@@ -2999,6 +2995,17 @@ void IsolateGroup::VisitStackPointers(ObjectPointerVisitor* visitor,
     // Visit mutator thread, even if the isolate isn't entered/scheduled
     // (there might be live API handles to visit).
     isolate->VisitStackPointers(visitor, validate_frames);
+  }
+
+  for (Isolate* isolate : isolates_) {
+    if (isolate->mutator_thread_ != nullptr && isolate->coroutines_registry() != Object::null()) {
+      auto coroutines = isolate->coroutines_registry().untag()->data();
+      auto coroutines_count = Smi::Value(isolate->coroutines_registry().untag()->length());
+      for (auto index = 0; index < coroutines_count; index++) {
+        auto item = Coroutine::RawCast(coroutines.untag()->element(index));
+        item->untag()->VisitStack(item, visitor);
+      }
+    }
   }
 
   visitor->clear_gc_root_type();
