@@ -1166,7 +1166,7 @@ void Thread::VisitObjectPointersCoroutine(Isolate* isolate, ObjectPointerVisitor
       frame->VisitObjectPointers(visitor);
       frame = frames_iterator.NextFrame();
       if (frame != nullptr && UntaggedCoroutine::LastFrame(frame, coroutine_)) {
-        OS::Print("Thread::VisitObjectPointersCoroutine: %s\n", frame->ToCString());
+        OS::Print("[last] Thread::VisitObjectPointersCoroutine: %s\n", frame->ToCString());
         frame->VisitObjectPointers(visitor);
         break;
       }
@@ -1365,7 +1365,7 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
       } else {
         ASSERT(frame->IsDartFrame(false));
         if (scan_next_dart_frame) {
-          OS::Print("RestoreWriteBarrierInvariantCoroutine 1: %s\n", frame->ToCString());
+          OS::Print("[last] RestoreWriteBarrierInvariantCoroutine 1: %s\n", frame->ToCString());
           frame->VisitObjectPointers(&visitor);
         }
         scan_next_dart_frame = false;
@@ -1466,7 +1466,7 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
           } else {
             ASSERT(frame->IsDartFrame(false));
             if (scan_next_dart_frame) {
-              OS::Print("RestoreWriteBarrierInvariantCoroutine 3: %s\n", frame->ToCString());
+              OS::Print("[last] RestoreWriteBarrierInvariantCoroutine 3: %s\n", frame->ToCString());
               frame->VisitObjectPointers(&visitor);
             }
             scan_next_dart_frame = false;

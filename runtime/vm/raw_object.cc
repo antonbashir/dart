@@ -693,7 +693,7 @@ void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor*
       frame->VisitObjectPointers(visitor);
       frame = frames_iterator.NextFrame();
       if (frame != nullptr && UntaggedCoroutine::LastFrame(frame, coroutine)) {
-        OS::Print("UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
+        OS::Print("[last] UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
         frame->VisitObjectPointers(visitor);
         break;
       }
@@ -704,7 +704,7 @@ void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor*
 bool UntaggedCoroutine::LastFrame(StackFrame* frame, CoroutinePtr coroutine) {
   if (StubCode::InCoroutineStub(frame->GetCallerPc())) return true;
   if (frame->GetCallerSp() < coroutine->untag()->stack_limit()) return true;
-  return frame->GetCallerSp() >= coroutine->untag()->stack_base();
+  return frame->GetCallerSp() >= coroutine->untag()->stack_root();
 }
 
 bool UntaggedCode::ContainsPC(const ObjectPtr raw_obj, uword pc) {
