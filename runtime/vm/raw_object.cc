@@ -652,7 +652,6 @@ intptr_t UntaggedSuspendState::VisitSuspendStatePointers(
 intptr_t UntaggedCoroutine::VisitCoroutinePointers(CoroutinePtr raw_obj, ObjectPointerVisitor* visitor) {
   if (!visitor->CanVisitCoroutinePointers(raw_obj)) return Coroutine::InstanceSize();
   visitor->VisitCompressedPointers(raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
-  VisitStack(CoroutineState{raw_obj.untag()->native_stack_base(), raw_obj.untag()->stack_base(), raw_obj.untag()->attributes()}, visitor);
   return Coroutine::InstanceSize();
 }
 

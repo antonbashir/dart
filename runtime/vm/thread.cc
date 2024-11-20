@@ -1163,8 +1163,14 @@ void Thread::VisitObjectPointersCoroutine(Isolate* isolate, ObjectPointerVisitor
     while (frame != nullptr) {
       OS::Print("Thread::VisitObjectPointersCoroutine: %s\n", frame->ToCString());
       frame->VisitObjectPointers(visitor);
-      if (StubCode::InCoroutineStub(frame->GetCallerPc())) break;//frames_iterator.NextFrame();
+      if (StubCode::InCoroutineStub(frame->GetCallerPc())) break;  //frames_iterator.NextFrame();
       frame = frames_iterator.NextFrame();
+    }
+    auto coroutines = isolate->coroutines_registry().untag()->data();
+    auto coroutines_count = Smi::Value(isolate->coroutines_registry().untag()->length());
+    for (auto index = 0; index < coroutines_count; index++) {
+      auto item = Coroutine::RawCast(coroutines.untag()->element(index)).untag();
+      UntaggedCoroutine::VisitStack(CoroutineState{item->native_stack_base(), item->stack_base(), item->attributes()}, visitor);
     }
     visitor->clear_gc_root_type();
   } else {
@@ -1303,8 +1309,8 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
       StackFrameIterator::kAllowCrossThreadIteration;
 
   StackFrameIterator thread_frames_iterator(top_exit_frame_info(),
-                                     ValidationPolicy::kDontValidateFrames,
-                                     this, cross_thread_policy);
+                                            ValidationPolicy::kDontValidateFrames,
+                                            this, cross_thread_policy);
   RestoreWriteBarrierInvariantVisitor visitor(isolate_group(), this, op);
   ObjectStore* object_store = isolate_group()->object_store();
 
