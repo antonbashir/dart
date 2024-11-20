@@ -1304,14 +1304,14 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
   const StackFrameIterator::CrossThreadPolicy cross_thread_policy =
       StackFrameIterator::kAllowCrossThreadIteration;
 
-  StackFrameIterator frames_iterator(top_exit_frame_info(),
+  StackFrameIterator thread_frames_iterator(top_exit_frame_info(),
                                      ValidationPolicy::kDontValidateFrames,
                                      this, cross_thread_policy);
   RestoreWriteBarrierInvariantVisitor visitor(isolate_group(), this, op);
   ObjectStore* object_store = isolate_group()->object_store();
 
   bool scan_next_dart_frame = false;
-  for (StackFrame* frame = frames_iterator.NextFrame(); frame != nullptr;) {
+  for (StackFrame* frame = thread_frames_iterator.NextFrame(); frame != nullptr;) {
     if (frame->IsExitFrame()) {
       scan_next_dart_frame = true;
     } else if (frame->IsEntryFrame()) {
@@ -1337,7 +1337,7 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
     }
 
     if (StubCode::InCoroutineStub(frame->GetCallerPc())) break;
-    frame = frames_iterator.NextFrame();
+    frame = thread_frames_iterator.NextFrame();
   }
 
   auto coroutines = isolate->coroutines_registry().untag()->data();
@@ -1346,11 +1346,12 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
     auto item = Coroutine::RawCast(coroutines.untag()->element(index)).untag();
     if (item->native_stack_base() != 0 &&
         (item->attributes() & (Coroutine::CoroutineAttributes::suspended | Coroutine::CoroutineAttributes::running)) != 0) {
-      StackFrameIterator scheduler_frames_iterator(*reinterpret_cast<uword*>(item->native_stack_base()),
+      auto fp = *reinterpret_cast<uword*>(item->native_stack_base());
+      StackFrameIterator scheduler_frames_iterator(fp,
                                                    ValidationPolicy::kDontValidateFrames,
                                                    this, cross_thread_policy);
       scan_next_dart_frame = false;
-      for (StackFrame* frame = frames_iterator.NextFrame(); frame != nullptr; frame = frames_iterator.NextFrame()) {
+      for (StackFrame* frame = scheduler_frames_iterator.NextFrame(); frame != nullptr; frame = scheduler_frames_iterator.NextFrame()) {
         if (frame->IsExitFrame()) {
           scan_next_dart_frame = true;
         } else if (frame->IsEntryFrame()) {
@@ -1378,11 +1379,12 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
     }
 
     if ((item->attributes() & Coroutine::CoroutineAttributes::suspended) != 0) {
-      StackFrameIterator coroutine_frames_iterator(*reinterpret_cast<uword*>(item->stack_base()),
+      volatile auto fp = *reinterpret_cast<uword*>(item->stack_base());
+      StackFrameIterator coroutine_frames_iterator(fp,
                                                    ValidationPolicy::kDontValidateFrames,
                                                    this, cross_thread_policy);
       scan_next_dart_frame = false;
-      for (StackFrame* frame = frames_iterator.NextFrame(); frame != nullptr;) {
+      for (StackFrame* frame = coroutine_frames_iterator.NextFrame(); frame != nullptr;) {
         if (frame->IsExitFrame()) {
           scan_next_dart_frame = true;
         } else if (frame->IsEntryFrame()) {
@@ -1408,7 +1410,7 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
         }
 
         if (StubCode::InCoroutineStub(frame->GetCallerPc())) break;
-        frame = frames_iterator.NextFrame();
+        frame = coroutine_frames_iterator.NextFrame();
       }
     }
   }
