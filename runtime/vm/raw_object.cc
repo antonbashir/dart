@@ -691,13 +691,17 @@ void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor*
     while (frame != nullptr) {
       OS::Print("UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
       frame->VisitObjectPointers(visitor);
-      if (UntaggedCoroutine::LastFrame(frame, coroutine)) break;
       frame = frames_iterator.NextFrame();
+      if (frame != nullptr && UntaggedCoroutine::LastFrame(frame, coroutine)) {
+        OS::Print("UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
+        frame->VisitObjectPointers(visitor);
+        break;
+      }
     }
   }
 }
 
-static bool LastFrame(StackFrame* frame, CoroutinePtr coroutine) {
+bool UntaggedCoroutine::LastFrame(StackFrame* frame, CoroutinePtr coroutine) {
   if (StubCode::InCoroutineStub(frame->GetCallerPc())) return true;
   if (frame->GetCallerSp() < coroutine->untag()->stack_limit()) return true;
   return frame->GetCallerSp() >= coroutine->untag()->stack_base();
