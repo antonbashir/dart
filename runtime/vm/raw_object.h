@@ -3821,7 +3821,9 @@ class UntaggedCoroutine : public UntaggedInstance {
     return OSThread::GetCurrentStackPointer() > overflow_stack_limit_;
   }
 
-  static void VisitStack(CoroutineState coroutine, ObjectPointerVisitor* visitor);
+  static void VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor);
+  
+  static bool LastFrame(StackFrame* frame, CoroutinePtr coroutine);
 };
 
 #undef WSR_COMPRESSED_POINTER_FIELD
