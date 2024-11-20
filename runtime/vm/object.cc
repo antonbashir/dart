@@ -26699,7 +26699,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
 //     return coroutine.ptr();
 //   }
 
-  const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kNew));
+  const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
 #if defined(DART_TARGET_OS_WINDOWS)
   void* stack_base = (void*)((uintptr_t)VirtualAlloc(
       nullptr, stack_size, MEM_RESERVE | MEM_COMMIT,

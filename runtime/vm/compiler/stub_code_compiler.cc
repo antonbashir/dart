@@ -3304,7 +3304,8 @@ void StubCodeCompiler::GenerateCoroutineForkStub() {
     __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG, Function::code_offset());
     __ LoadImmediate(ARGS_DESC_REG, 0);
   }
-  __ Call(compiler::FieldAddress(FUNCTION_REG, Function::entry_point_offset()));
+  __ LoadCompressedField(TMP, compiler::FieldAddress(FUNCTION_REG, Function::entry_point_offset()));
+  __ call(TMP);
   
   __ PopRegister(kForkedCoroutine);
   __ StoreFieldToOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
