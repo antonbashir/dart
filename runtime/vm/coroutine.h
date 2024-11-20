@@ -12,6 +12,13 @@
 #endif
 
 namespace dart {
+
+struct CoroutineState {
+  uword nsp;
+  uword sp;
+  uword attributes;
+};
+
 class CoroutineLink {
  public:
   DART_FORCE_INLINE

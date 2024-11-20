@@ -14,5 +14,6 @@ void main() {
         print("Finished: ${percents / iterations * 100}%");
       }
     }
+    print("exit");
   });
 }

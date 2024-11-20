@@ -8,6 +8,7 @@
 #include "vm/dart.h"
 #include "vm/heap/become.h"
 #include "vm/heap/freelist.h"
+#include "vm/heap/safepoint.h"
 #include "vm/isolate.h"
 #include "vm/isolate_reload.h"
 #include "vm/object.h"
@@ -649,22 +650,33 @@ intptr_t UntaggedSuspendState::VisitSuspendStatePointers(
 }
 
 intptr_t UntaggedCoroutine::VisitCoroutinePointers(CoroutinePtr raw_obj, ObjectPointerVisitor* visitor) {
-  if (visitor->CanVisitCoroutinePointers(raw_obj)) {
-      visitor->VisitCompressedPointers(raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
-      if (Thread::Current()->IsDartMutatorThread()) raw_obj->untag()->VisitStack(raw_obj, visitor);
-  }
+  if (!visitor->CanVisitCoroutinePointers(raw_obj)) return Coroutine::InstanceSize();
+  visitor->VisitCompressedPointers(raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
+  VisitStack(CoroutineState{raw_obj.untag()->native_stack_base(), raw_obj.untag()->stack_base(), raw_obj.untag()->attributes()}, visitor);
   return Coroutine::InstanceSize();
 }
 
-void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor) {
-  if (!visitor->CanVisitCoroutinePointers(coroutine)) {
-    return;
+void UntaggedCoroutine::VisitStack(CoroutineState coroutine, ObjectPointerVisitor* visitor) {
+  if (coroutine.nsp != 0) {
+    auto native_stack = coroutine.nsp;
+    auto attributes = coroutine.attributes;
+    Thread* thread = Thread::Current();
+    if (native_stack != 0 && (attributes & (Coroutine::CoroutineAttributes::suspended | Coroutine::CoroutineAttributes::running)) != 0) {
+      const uword fp = *reinterpret_cast<uword*>(native_stack);
+      StackFrameIterator frames_iterator(
+          fp, ValidationPolicy::kDontValidateFrames, thread,
+          StackFrameIterator::kAllowCrossThreadIteration,
+          StackFrameIterator::kStackOwnerCoroutine);
+      StackFrame* frame = frames_iterator.NextFrame();
+      while (frame != nullptr) {
+        OS::Print("UntaggedCoroutine::VisitNativeStack: %s\n", frame->ToCString());
+        frame->VisitObjectPointers(visitor);
+        frame = frames_iterator.NextFrame();
+      }
+    }
   }
-  if (native_stack_base_ != 0) {
-    VisitNativeStack(coroutine, visitor);
-  }
-  auto stack = stack_base_;
-  auto attributes = attributes_;
+  auto stack = coroutine.sp;
+  auto attributes = coroutine.attributes;
   Thread* thread = Thread::Current();
   if ((attributes & (Coroutine::CoroutineAttributes::suspended)) != 0) {
     const uword fp = *reinterpret_cast<uword*>(stack);
@@ -672,37 +684,11 @@ void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor*
         fp, ValidationPolicy::kDontValidateFrames, thread,
         StackFrameIterator::kAllowCrossThreadIteration,
         StackFrameIterator::kStackOwnerCoroutine);
-    frames_iterator.NextFrame();
-    frames_iterator.NextFrame();
     StackFrame* frame = frames_iterator.NextFrame();
     while (frame != nullptr) {
-      OS::Print("UntaggedCoroutine::VisitStack: %ld: %s\n", index_, frame->ToCString());
+      OS::Print("UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
       frame->VisitObjectPointers(visitor);
       if (StubCode::InCoroutineStub(frame->GetCallerPc())) break;
-      frame = frames_iterator.NextFrame();
-    }
-  }
-}
-
-void UntaggedCoroutine::VisitNativeStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor) {
-  if (!visitor->CanVisitCoroutinePointers(coroutine)) {
-    return;
-  }
-  auto native_stack = native_stack_base_;
-  auto attributes = attributes_;
-  Thread* thread = Thread::Current();
-  if (native_stack != 0 && (attributes & (Coroutine::CoroutineAttributes::suspended | Coroutine::CoroutineAttributes::running)) != 0) {
-    const uword fp = *reinterpret_cast<uword*>(native_stack);
-    StackFrameIterator frames_iterator(
-        fp, ValidationPolicy::kDontValidateFrames, thread,
-        StackFrameIterator::kAllowCrossThreadIteration,
-        StackFrameIterator::kStackOwnerCoroutine);
-    frames_iterator.NextFrame();
-    frames_iterator.NextFrame();
-    StackFrame* frame = frames_iterator.NextFrame();
-    while (frame != nullptr) {
-      OS::Print("UntaggedCoroutine::VisitNativeStack: %ld: %s\n", index_, frame->ToCString());
-      frame->VisitObjectPointers(visitor);
       frame = frames_iterator.NextFrame();
     }
   }

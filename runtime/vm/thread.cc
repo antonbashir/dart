@@ -1328,7 +1328,7 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
     } else {
       ASSERT(frame->IsDartFrame(false));
       if (scan_next_dart_frame) {
-        //OS::Print("RestoreWriteBarrierInvariantCoroutine 1: %s\n", frame->ToCString());
+        OS::Print("RestoreWriteBarrierInvariantCoroutine 1: %s\n", frame->ToCString());
         frame->VisitObjectPointers(&visitor);
       }
       scan_next_dart_frame = false;
@@ -1344,13 +1344,11 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
     auto item = Coroutine::RawCast(coroutines.untag()->element(index)).untag();
     if (item->native_stack_base() != 0 &&
         (item->attributes() & (Coroutine::CoroutineAttributes::suspended | Coroutine::CoroutineAttributes::running)) != 0) {
-      auto fp = *reinterpret_cast<uword*>(item->native_stack_base());
+      volatile auto fp = *reinterpret_cast<uword*>(item->native_stack_base());
       StackFrameIterator scheduler_frames_iterator(fp,
                                                    ValidationPolicy::kDontValidateFrames,
                                                    this, cross_thread_policy);
       scan_next_dart_frame = false;
-      scheduler_frames_iterator.NextFrame();
-      scheduler_frames_iterator.NextFrame();
       for (StackFrame* frame = scheduler_frames_iterator.NextFrame(); frame != nullptr; frame = scheduler_frames_iterator.NextFrame()) {
         if (frame->IsExitFrame()) {
           scan_next_dart_frame = true;
@@ -1370,7 +1368,7 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
         } else {
           ASSERT(frame->IsDartFrame(false));
           if (scan_next_dart_frame) {
-            //OS::Print("RestoreWriteBarrierInvariantCoroutine 2: %s\n", frame->ToCString());
+            OS::Print("RestoreWriteBarrierInvariantCoroutine 2: %s\n", frame->ToCString());
             frame->VisitObjectPointers(&visitor);
           }
           scan_next_dart_frame = false;
@@ -1384,8 +1382,6 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
                                                    ValidationPolicy::kDontValidateFrames,
                                                    this, cross_thread_policy);
       scan_next_dart_frame = false;
-      coroutine_frames_iterator.NextFrame();
-      coroutine_frames_iterator.NextFrame();
       for (StackFrame* frame = coroutine_frames_iterator.NextFrame(); frame != nullptr;) {
         if (frame->IsExitFrame()) {
           scan_next_dart_frame = true;
@@ -1405,7 +1401,7 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
         } else {
           ASSERT(frame->IsDartFrame(false));
           if (scan_next_dart_frame) {
-            //OS::Print("RestoreWriteBarrierInvariantCoroutine 3: %s\n", frame->ToCString());
+            OS::Print("RestoreWriteBarrierInvariantCoroutine 3: %s\n", frame->ToCString());
             frame->VisitObjectPointers(&visitor);
           }
           scan_next_dart_frame = false;
