@@ -1579,9 +1579,6 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   bool is_system_isolate_ = false;
   std::unique_ptr<IsolateObjectStore> isolate_object_store_;
   GrowableObjectArrayPtr coroutines_registry_;
-  
-  CoroutineState** coroutines_;
-  uword coroutines_count_;
   // End accessed from generated code.
 
   IsolateGroup* const isolate_group_;

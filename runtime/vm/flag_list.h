@@ -90,10 +90,10 @@ constexpr bool FLAG_support_il_printer = false;
     "Check validity of token positions while compiling flow graphs")           \
   P(collect_dynamic_function_names, bool, true,                                \
     "Collects all dynamic function names to identify unique targets")          \
-  P(compactor_tasks, int, 0,                                                   \
+  P(compactor_tasks, int, 2,                                                   \
     "The number of tasks to use for parallel compaction.")                     \
-  P(concurrent_mark, bool, true, "Concurrent mark for old generation.")        \
-  P(concurrent_sweep, bool, true, "Concurrent sweep for old generation.")      \
+  P(concurrent_mark, bool, false, "Concurrent mark for old generation.")        \
+  P(concurrent_sweep, bool, false, "Concurrent sweep for old generation.")      \
   C(deoptimize_alot, false, false, bool, false,                                \
     "Deoptimizes we are about to return to Dart code from native entries.")    \
   C(deoptimize_every, 0, 0, int, 0,                                            \

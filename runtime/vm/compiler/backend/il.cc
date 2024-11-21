@@ -8596,7 +8596,7 @@ LocationSummary* CoroutineTransferInstr::MakeLocationSummary(Zone* zone,
       0, Location::RegisterLocation(CoroutineTransferABI::kFromCoroutineReg));
   locs->set_in(
       1, Location::RegisterLocation(CoroutineTransferABI::kToCoroutineReg));
-  locs->set_in(
+  locs->set_temp(
       0, Location::RegisterLocation(CoroutineTransferABI::kToStackLimitReg));
   return locs;
 }

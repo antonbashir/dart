@@ -26663,7 +26663,7 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   GcSafepointOperationScope safepoint(Thread::Current());
   auto isolate = Isolate::Current();
 //  auto finished = isolate->finished_coroutines();
-  auto active = isolate->active_coroutines();
+//  auto active = isolate->active_coroutines();
   auto& registry = GrowableObjectArray::Handle(isolate->coroutines_registry());
 
   auto page_size = VirtualMemory::PageSize();
@@ -26719,29 +26719,29 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   coroutine.untag()->stack_base_ = stack_base;
   coroutine.untag()->stack_limit_ = stack_limit;
   coroutine.untag()->overflow_stack_limit_ = stack_limit + CalculateHeadroom(stack_base - stack_limit);
-  coroutine.untag()->to_state_.Initialize();
-  coroutine.untag()->to_state_.SetValue(coroutine.ptr());
+  // coroutine.untag()->to_state_.Initialize();
+  // coroutine.untag()->to_state_.SetValue(coroutine.ptr());
   coroutine.untag()->set_trampoline(trampoline);
 
   coroutine.untag()->set_index(registry.Length());
   registry.Add(coroutine);
 
-  CoroutineLink::AddHead(active, coroutine.to_state());
+  //CoroutineLink::AddHead(active, coroutine.to_state());
 
   return coroutine.ptr();
 }
 
 void Coroutine::recycle(Zone* zone) const {
   change_state(CoroutineAttributes::created | CoroutineAttributes::running | CoroutineAttributes::suspended, CoroutineAttributes::finished);
-  auto finished = Isolate::Current()->finished_coroutines();
+  //auto finished = Isolate::Current()->finished_coroutines();
   untag()->stack_base_ = untag()->stack_root_;
   untag()->native_stack_base_ = (uword) nullptr;
-  CoroutineLink::StealHead(finished, to_state());
+  //CoroutineLink::StealHead(finished, to_state());
 }
 
 void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) const {
   change_state(CoroutineAttributes::created | CoroutineAttributes::running | CoroutineAttributes::suspended, CoroutineAttributes::disposed);
-  CoroutineLink::Remove(to_state());
+//  CoroutineLink::Remove(to_state());
   untag()->set_name(String::null());
   untag()->set_entry(Closure::null());
   untag()->set_trampoline(Function::null());
@@ -26762,29 +26762,30 @@ void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) c
   untag()->stack_base_ = (uword) nullptr;
   untag()->stack_limit_ = (uword) nullptr;
   untag()->overflow_stack_limit_ = (uword) nullptr;
-
-  if (!remove_from_registry) {
-    untag()->set_index(-1);
-    return;
-  }
-
-  auto& coroutines = GrowableObjectArray::Handle(zone, thread->isolate()->coroutines_registry());
-  coroutines.RemoveAt(index());
   untag()->set_index(-1);
 
-  if (coroutines.Capacity() < FLAG_coroutines_registry_shrink_capacity) {
-    return;
-  }
+  // if (!remove_from_registry) {
+  //   untag()->set_index(-1);
+  //   return;
+  // }
 
-  auto& new_coroutines = GrowableObjectArray::Handle(GrowableObjectArray::New(std::max(coroutines.Length(), (intptr_t)FLAG_coroutines_registry_initial_capacity)));
-  auto& new_coroutine = Coroutine::Handle();
-  for (intptr_t index = 0; index < coroutines.Length(); index++) {
-    new_coroutine ^= coroutines.At(index);
-    new_coroutine.set_index(new_coroutines.Length());
-    new_coroutines.Add(new_coroutine);
-  }
-  Array::Handle(coroutines.data()).Truncate(0);
-  thread->isolate()->set_coroutines_registry(new_coroutines.ptr());
+  // auto& coroutines = GrowableObjectArray::Handle(zone, thread->isolate()->coroutines_registry());
+  // coroutines.RemoveAt(index());
+  // untag()->set_index(-1);
+
+  // if (coroutines.Capacity() < FLAG_coroutines_registry_shrink_capacity) {
+  //   return;
+  // }
+
+  // auto& new_coroutines = GrowableObjectArray::Handle(GrowableObjectArray::New(std::max(coroutines.Length(), (intptr_t)FLAG_coroutines_registry_initial_capacity)));
+  // auto& new_coroutine = Coroutine::Handle();
+  // for (intptr_t index = 0; index < coroutines.Length(); index++) {
+  //   new_coroutine ^= coroutines.At(index);
+  //   new_coroutine.set_index(new_coroutines.Length());
+  //   new_coroutines.Add(new_coroutine);
+  // }
+  // Array::Handle(coroutines.data()).Truncate(0);
+  // thread->isolate()->set_coroutines_registry(new_coroutines.ptr());
 }
 
 const char* Coroutine::ToCString() const {
@@ -26868,8 +26869,8 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
 
 void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
   GcSafepointOperationScope safepoint(Thread::Current());
-  auto active = Isolate::Current()->active_coroutines();
-  CoroutineLink::StealHead(active, to_state());
+//  auto active = Isolate::Current()->active_coroutines();
+  //CoroutineLink::StealHead(active, to_state());
   thread->EnterCoroutine(ptr());
 }
 

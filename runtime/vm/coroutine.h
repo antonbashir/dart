@@ -12,13 +12,6 @@
 #endif
 
 namespace dart {
-
-struct CoroutineState {
-  uword nsp;
-  uword sp;
-  uword attributes;
-};
-
 class CoroutineLink {
  public:
   DART_FORCE_INLINE
@@ -42,16 +35,6 @@ class CoroutineLink {
   DART_FORCE_INLINE
   void SetValue(CoroutinePtr value) { 
     value_ = value; 
-    native_sp_ = 0;
-    sp_ = 0;
-    attributes_ = 0;
-  }
-
-  DART_FORCE_INLINE
-  void Synchronize(uword native_sp, uword sp, uword attributes) {
-    attributes_ = attributes;
-    native_sp_ = native_sp;
-    sp_ = sp;
   }
 
   DART_FORCE_INLINE
@@ -83,9 +66,6 @@ class CoroutineLink {
   CoroutineLink* next_;
   CoroutineLink* previous_;
   CoroutinePtr value_;
-  uword native_sp_;
-  uword sp_;
-  uword attributes_;
 };
 
 }  // namespace dart
