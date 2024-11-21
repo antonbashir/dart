@@ -1576,6 +1576,29 @@ void Call1ArgStubInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   f->AddString(")");
 }
 
+void CoroutineInitializeInstr::PrintOperandsTo(BaseTextBuffer* f) const {
+  const char* name = "CoroutineInitialize";
+  f->Printf("%s(", name);
+  root()->PrintTo(f);
+  f->AddString(")");
+}
+
+void CoroutineTransferInstr::PrintOperandsTo(BaseTextBuffer* f) const {
+  const char* name = "CoroutineTransfer";
+  f->Printf("%s(", name);
+  from()->PrintTo(f);
+  to()->PrintTo(f);
+  f->AddString(")");
+}
+
+void CoroutineForkInstr::PrintOperandsTo(BaseTextBuffer* f) const {
+  const char* name = "CoroutineFork";
+  f->Printf("%s(", name);
+  from()->PrintTo(f);
+  to()->PrintTo(f);
+  f->AddString(")");
+}
+
 void SuspendInstr::PrintOperandsTo(BaseTextBuffer* f) const {
   const char* name = "";
   switch (stub_id_) {

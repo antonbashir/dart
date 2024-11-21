@@ -5,6 +5,7 @@
 #ifndef RUNTIME_VM_THREAD_H_
 #define RUNTIME_VM_THREAD_H_
 
+#include "vm/tagged_pointer.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
@@ -392,6 +393,27 @@ class Thread : public ThreadState {
 
   void SetStackLimit(uword value);
   void ClearStackLimit();
+
+  void RestoreCoroutine(CoroutinePtr coroutine);
+  CoroutinePtr SaveCoroutine();
+  void EnterCoroutine(CoroutinePtr coroutine);
+  void ExitCoroutine();
+  void DisableCoroutine();
+  void EnableCoroutine();
+
+  bool has_coroutine() const;
+  bool has_disabled_coroutine() const;
+  CoroutinePtr coroutine() const { return coroutine_; }
+  static intptr_t coroutine_offset() { return OFFSET_OF(Thread, coroutine_); }
+  void set_coroutine(CoroutinePtr value) { coroutine_ = value; }
+
+  CoroutinePtr disabled_coroutine() const { return disabled_coroutine_; }
+  static intptr_t disabled_coroutine_offset() {
+    return OFFSET_OF(Thread, disabled_coroutine_);
+  }
+
+  uword GetSavedStackLimit() const;
+  bool HasStackHeadroom() const;
 
   // Access to the current stack limit for generated code. Either the true OS
   // thread's stack limit minus some headroom, or a special value to trigger
@@ -1115,8 +1137,9 @@ class Thread : public ThreadState {
   // Visit all object pointers.
   void VisitObjectPointers(ObjectPointerVisitor* visitor,
                            ValidationPolicy validate_frames);
-  void RememberLiveTemporaries();
-  void DeferredMarkLiveTemporaries();
+
+  void RememberLiveTemporaries(Isolate* isolate);
+  void DeferredMarkLiveTemporaries(Isolate* isolate);
 
   bool IsValidHandle(Dart_Handle object) const;
   bool IsValidLocalHandle(Dart_Handle object) const;
@@ -1164,6 +1187,10 @@ class Thread : public ThreadState {
   };
   friend class RestoreWriteBarrierInvariantVisitor;
   void RestoreWriteBarrierInvariant(RestoreWriteBarrierInvariantOp op);
+  
+  void RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWriteBarrierInvariantOp op);
+
+  void VisitObjectPointersCoroutine(Isolate* isolate, ObjectPointerVisitor* visitor, ValidationPolicy validate_frames);
 
   // Set the current compiler state and return the previous compiler state.
   CompilerState* SetCompilerState(CompilerState* state) {
@@ -1236,6 +1263,9 @@ class Thread : public ThreadState {
   // JumpToExceptionHandler state:
   ObjectPtr active_exception_;
   ObjectPtr active_stacktrace_;
+
+  CoroutinePtr coroutine_;
+  CoroutinePtr disabled_coroutine_;
 
   ObjectPoolPtr global_object_pool_;
   uword resume_pc_;

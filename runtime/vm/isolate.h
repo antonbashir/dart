@@ -5,6 +5,8 @@
 #ifndef RUNTIME_VM_ISOLATE_H_
 #define RUNTIME_VM_ISOLATE_H_
 
+#include "vm/compiler/runtime_api.h"
+#include "vm/tagged_pointer.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
@@ -37,6 +39,7 @@
 #include "vm/thread_stack_resource.h"
 #include "vm/token_position.h"
 #include "vm/virtual_memory.h"
+#include "vm/coroutine.h"
 
 namespace dart {
 
@@ -86,6 +89,7 @@ class StubCode;
 class ThreadRegistry;
 class UserTag;
 class WeakTable;
+class CoroutineLink;
 
 class IsolateVisitor {
  public:
@@ -1004,6 +1008,19 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
     T->field_table_values_ = field_table->table();
   }
 
+  bool HasCoroutine() const;
+  CoroutinePtr RestoreCoroutine();
+  void SaveCoroutine(CoroutinePtr coroutine) { saved_coroutine_ = coroutine; }
+
+  CoroutineLink* finished_coroutines() { return &finished_coroutines_; }
+  CoroutineLink* active_coroutines() { return &active_coroutines_; }
+  
+  GrowableObjectArrayPtr coroutines_registry() { return coroutines_registry_; }
+  void set_coroutines_registry(GrowableObjectArrayPtr coroutines) { coroutines_registry_ = coroutines; }
+  static intptr_t coroutines_registry_offset() {
+    return OFFSET_OF(Isolate, coroutines_registry_);
+  }
+
   IsolateObjectStore* isolate_object_store() const {
     return isolate_object_store_.get();
   }
@@ -1560,11 +1577,15 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   bool single_step_ = false;
   bool has_resumption_breakpoints_ = false;
   bool is_system_isolate_ = false;
+  std::unique_ptr<IsolateObjectStore> isolate_object_store_;
+  GrowableObjectArrayPtr coroutines_registry_;
   // End accessed from generated code.
 
   IsolateGroup* const isolate_group_;
   IdleTimeHandler idle_time_handler_;
-  std::unique_ptr<IsolateObjectStore> isolate_object_store_;
+  CoroutinePtr saved_coroutine_;
+  CoroutineLink active_coroutines_;
+  CoroutineLink finished_coroutines_;
 
 #define ISOLATE_FLAG_BITS(V)                                                   \
   V(ErrorsFatal)                                                               \
@@ -1621,7 +1642,7 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   VMTagCounters vm_tag_counters_;
 
   // We use 6 list entries for each pending service extension calls.
-  enum {
+	  enum {
     kPendingHandlerIndex = 0,
     kPendingMethodNameIndex,
     kPendingKeysIndex,
@@ -1674,6 +1695,7 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   DeoptContext* deopt_context_ = nullptr;
   FfiCallbackMetadata::Metadata* ffi_callback_list_head_ = nullptr;
   intptr_t ffi_callback_keep_alive_counter_ = 0;
+
 
   GrowableObjectArrayPtr tag_table_;
 

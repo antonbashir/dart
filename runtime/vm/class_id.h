@@ -102,6 +102,7 @@ static constexpr intptr_t kClassIdTagMax = (1 << 20) - 1;
   V(SendPort)                                                                  \
   V(StackTrace)                                                                \
   V(SuspendState)                                                              \
+  V(Coroutine)                                                                 \
   V(RegExp)                                                                    \
   V(WeakProperty)                                                              \
   V(WeakReference)                                                             \

@@ -231,7 +231,25 @@ namespace dart {
   F(TypedDataView, length_)                                                    \
   F(TypedDataView, typed_data_)                                                \
   F(TypedDataView, offset_in_bytes_)                                           \
-  F(FutureOr, type_arguments_)
+  F(FutureOr, type_arguments_)                                                 \
+  F(Coroutine, name_)                                                          \
+  F(Coroutine, entry_)                                                         \
+  F(Coroutine, trampoline_)                                                    \
+  F(Coroutine, argument_)                                                      \
+  F(Coroutine, attributes_)                                                    \
+  F(Coroutine, caller_)                                                        \
+  F(Coroutine, scheduler_)                                                     \
+  F(Coroutine, processor_)                                                     \
+  F(Coroutine, to_processor_next_)                                             \
+  F(Coroutine, to_processor_previous_)                                         \
+  F(Coroutine, to_state_)                                                      \
+  F(Coroutine, index_)                                                         \
+  F(Coroutine, stack_size_)                                                    \
+  F(Coroutine, native_stack_base_)                                             \
+  F(Coroutine, stack_root_)                                                    \
+  F(Coroutine, stack_base_)                                                    \
+  F(Coroutine, stack_limit_)                                                   \
+  F(Coroutine, overflow_stack_limit_)
 
 #define AOT_CLASSES_AND_FIELDS(F)
 

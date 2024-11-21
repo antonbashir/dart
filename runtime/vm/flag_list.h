@@ -26,19 +26,19 @@ constexpr intptr_t kDefaultOptimizationCounterThreshold = 30000;
 // to conditionally make these into product flags to make the disassembler
 // usable in product mode.
 #if defined(FORCE_INCLUDE_DISASSEMBLER)
-#define DISASSEMBLE_FLAGS(P, R, C, D)                                          \
-  P(disassemble, bool, false, "Disassemble dart code.")                        \
-  P(disassemble_optimized, bool, false, "Disassemble optimized code.")         \
-  P(disassemble_relative, bool, false, "Use offsets instead of absolute PCs")  \
-  P(disassemble_stubs, bool, false, "Disassemble generated stubs.")            \
+#define DISASSEMBLE_FLAGS(P, R, C, D)                                         \
+  P(disassemble, bool, false, "Disassemble dart code.")                       \
+  P(disassemble_optimized, bool, false, "Disassemble optimized code.")        \
+  P(disassemble_relative, bool, false, "Use offsets instead of absolute PCs") \
+  P(disassemble_stubs, bool, false, "Disassemble generated stubs.")           \
   P(support_disassembler, bool, true, "Support the disassembler.")
 #else
-#define DISASSEMBLE_FLAGS(P, R, C, D)                                          \
-  R(disassemble, false, bool, false, "Disassemble dart code.")                 \
-  R(disassemble_optimized, false, bool, false, "Disassemble optimized code.")  \
-  R(disassemble_relative, false, bool, false,                                  \
-    "Use offsets instead of absolute PCs")                                     \
-  R(disassemble_stubs, false, bool, false, "Disassemble generated stubs.")     \
+#define DISASSEMBLE_FLAGS(P, R, C, D)                                         \
+  R(disassemble, false, bool, false, "Disassemble dart code.")                \
+  R(disassemble_optimized, false, bool, false, "Disassemble optimized code.") \
+  R(disassemble_relative, false, bool, false,                                 \
+    "Use offsets instead of absolute PCs")                                    \
+  R(disassemble_stubs, false, bool, false, "Disassemble generated stubs.")    \
   R(support_disassembler, false, bool, true, "Support the disassembler.")
 #endif
 
@@ -92,8 +92,8 @@ constexpr bool FLAG_support_il_printer = false;
     "Collects all dynamic function names to identify unique targets")          \
   P(compactor_tasks, int, 2,                                                   \
     "The number of tasks to use for parallel compaction.")                     \
-  P(concurrent_mark, bool, true, "Concurrent mark for old generation.")        \
-  P(concurrent_sweep, bool, true, "Concurrent sweep for old generation.")      \
+  P(concurrent_mark, bool, false, "Concurrent mark for old generation.")        \
+  P(concurrent_sweep, bool, false, "Concurrent sweep for old generation.")      \
   C(deoptimize_alot, false, false, bool, false,                                \
     "Deoptimizes we are about to return to Dart code from native entries.")    \
   C(deoptimize_every, 0, 0, int, 0,                                            \
@@ -222,15 +222,15 @@ constexpr bool FLAG_support_il_printer = false;
   P(use_field_guards, bool, true, "Use field guards and track field types")    \
   C(use_osr, false, true, bool, true, "Use OSR")                               \
   P(use_slow_path, bool, false, "Whether to avoid inlined fast paths.")        \
-  P(verbose_gc, bool, false, "Enables verbose GC.")                            \
+  P(verbose_gc, bool, true, "Enables verbose GC.")                            \
   P(verbose_gc_hdr, int, 40, "Print verbose GC header interval.")              \
-  R(verify_after_gc, false, bool, false,                                       \
+  R(verify_after_gc, true, bool, true,                                       \
     "Enables heap verification after GC.")                                     \
-  R(verify_before_gc, false, bool, false,                                      \
+  R(verify_before_gc, true, bool, true,                                      \
     "Enables heap verification before GC.")                                    \
-  R(verify_store_buffer, false, bool, false,                                   \
+  R(verify_store_buffer, true, bool, true,                                   \
     "Enables store buffer verification before and after scavenges.")           \
-  R(verify_after_marking, false, bool, false,                                  \
+  R(verify_after_marking, true, bool, true,                                  \
     "Enables heap verification after marking.")                                \
   P(enable_slow_path_sharing, bool, true, "Enable sharing of slow-path code.") \
   P(shared_slow_path_triggers_gc, bool, false,                                 \
@@ -242,6 +242,10 @@ constexpr bool FLAG_support_il_printer = false;
   R(eliminate_type_checks, true, bool, true,                                   \
     "Eliminate type checks when allowed by static type analysis.")             \
   D(support_rr, bool, false, "Support running within RR.")                     \
+  P(coroutines_registry_initial_capacity, int, 64,                             \
+    "All coroutines array initial size.")                                      \
+  P(coroutines_registry_shrink_capacity, int, 1024 * 1024,                     \
+    "Shrink coroutines registry when reached this capacity.")                  \
   P(verify_entry_points, bool, false,                                          \
     "Throw API error on invalid member access through native API. See "        \
     "entry_point_pragma.md")                                                   \

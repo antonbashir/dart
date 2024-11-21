@@ -22,6 +22,7 @@ vm_internal_sdk_sources = [
   "ffi_native_type_patch.dart",
   "ffi_patch.dart",
   "ffi_struct_patch.dart",
+  "fiber_patch.dart",
   "finalizer_patch.dart",
   "function.dart",
   "function_patch.dart",

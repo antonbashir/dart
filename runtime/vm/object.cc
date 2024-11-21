@@ -5,6 +5,12 @@
 #include "vm/object.h"
 
 #include <memory>
+#include "platform/globals.h"
+#include "vm/flags.h"
+
+#if !defined(DART_TARGET_OS_WINDOWS)
+#include <sys/mman.h>
+#endif
 
 #include "compiler/method_recognizer.h"
 #include "include/dart_api.h"
@@ -131,15 +137,15 @@ cpp_vtable Object::builtin_vtables_[kNumPredefinedCids] = {};
 #endif
 #define RAW_NULL static_cast<uword>(kHeapObjectTag)
 
-#define CHECK_ERROR(error)                                                     \
-  {                                                                            \
-    ErrorPtr err = (error);                                                    \
-    if (err != Error::null()) {                                                \
-      return err;                                                              \
-    }                                                                          \
+#define CHECK_ERROR(error)      \
+  {                             \
+    ErrorPtr err = (error);     \
+    if (err != Error::null()) { \
+      return err;               \
+    }                           \
   }
 
-#define DEFINE_SHARED_READONLY_HANDLE(Type, name)                              \
+#define DEFINE_SHARED_READONLY_HANDLE(Type, name) \
   Type* Object::name##_ = nullptr;
 SHARED_READONLY_HANDLES_LIST(DEFINE_SHARED_READONLY_HANDLE)
 #undef DEFINE_SHARED_READONLY_HANDLE
@@ -206,9 +212,9 @@ static void AppendSubString(BaseTextBuffer* buffer,
     return Type::RawCast(WeakSerializationReference::Unwrap(untag()->Name())); \
   }
 #else
-#define PRECOMPILER_WSR_FIELD_DEFINITION(Class, Type, Name)                    \
-  void Class::set_##Name(const Type& value) const {                            \
-    untag()->set_##Name(value.ptr());                                          \
+#define PRECOMPILER_WSR_FIELD_DEFINITION(Class, Type, Name) \
+  void Class::set_##Name(const Type& value) const {         \
+    untag()->set_##Name(value.ptr());                       \
   }
 #endif
 
@@ -218,14 +224,14 @@ PRECOMPILER_WSR_FIELD_DEFINITION(Function, FunctionType, signature)
 #undef PRECOMPILER_WSR_FIELD_DEFINITION
 
 #if defined(_MSC_VER)
-#define TRACE_TYPE_CHECKS_VERBOSE(format, ...)                                 \
-  if (FLAG_trace_type_checks_verbose) {                                        \
-    OS::PrintErr(format, __VA_ARGS__);                                         \
+#define TRACE_TYPE_CHECKS_VERBOSE(format, ...) \
+  if (FLAG_trace_type_checks_verbose) {        \
+    OS::PrintErr(format, __VA_ARGS__);         \
   }
 #else
-#define TRACE_TYPE_CHECKS_VERBOSE(format, ...)                                 \
-  if (FLAG_trace_type_checks_verbose) {                                        \
-    OS::PrintErr(format, ##__VA_ARGS__);                                       \
+#define TRACE_TYPE_CHECKS_VERBOSE(format, ...) \
+  if (FLAG_trace_type_checks_verbose) {        \
+    OS::PrintErr(format, ##__VA_ARGS__);       \
   }
 #endif
 
@@ -618,43 +624,43 @@ void Object::InitVtables() {
     builtin_vtables_[kObjectCid] = fake_handle.vtable();
   }
 
-#define INIT_VTABLE(clazz)                                                     \
-  {                                                                            \
-    clazz fake_handle;                                                         \
-    builtin_vtables_[k##clazz##Cid] = fake_handle.vtable();                    \
+#define INIT_VTABLE(clazz)                                  \
+  {                                                         \
+    clazz fake_handle;                                      \
+    builtin_vtables_[k##clazz##Cid] = fake_handle.vtable(); \
   }
   CLASS_LIST_NO_OBJECT_NOR_STRING_NOR_ARRAY_NOR_MAP(INIT_VTABLE)
   INIT_VTABLE(GrowableObjectArray)
 #undef INIT_VTABLE
 
-#define INIT_VTABLE(clazz)                                                     \
-  {                                                                            \
-    Map fake_handle;                                                           \
-    builtin_vtables_[k##clazz##Cid] = fake_handle.vtable();                    \
+#define INIT_VTABLE(clazz)                                  \
+  {                                                         \
+    Map fake_handle;                                        \
+    builtin_vtables_[k##clazz##Cid] = fake_handle.vtable(); \
   }
   CLASS_LIST_MAPS(INIT_VTABLE)
 #undef INIT_VTABLE
 
-#define INIT_VTABLE(clazz)                                                     \
-  {                                                                            \
-    Set fake_handle;                                                           \
-    builtin_vtables_[k##clazz##Cid] = fake_handle.vtable();                    \
+#define INIT_VTABLE(clazz)                                  \
+  {                                                         \
+    Set fake_handle;                                        \
+    builtin_vtables_[k##clazz##Cid] = fake_handle.vtable(); \
   }
   CLASS_LIST_SETS(INIT_VTABLE)
 #undef INIT_VTABLE
 
-#define INIT_VTABLE(clazz)                                                     \
-  {                                                                            \
-    Array fake_handle;                                                         \
-    builtin_vtables_[k##clazz##Cid] = fake_handle.vtable();                    \
+#define INIT_VTABLE(clazz)                                  \
+  {                                                         \
+    Array fake_handle;                                      \
+    builtin_vtables_[k##clazz##Cid] = fake_handle.vtable(); \
   }
   CLASS_LIST_FIXED_LENGTH_ARRAYS(INIT_VTABLE)
 #undef INIT_VTABLE
 
-#define INIT_VTABLE(clazz)                                                     \
-  {                                                                            \
-    String fake_handle;                                                        \
-    builtin_vtables_[k##clazz##Cid] = fake_handle.vtable();                    \
+#define INIT_VTABLE(clazz)                                  \
+  {                                                         \
+    String fake_handle;                                     \
+    builtin_vtables_[k##clazz##Cid] = fake_handle.vtable(); \
   }
   CLASS_LIST_STRINGS(INIT_VTABLE)
 #undef INIT_VTABLE
@@ -664,10 +670,10 @@ void Object::InitVtables() {
     builtin_vtables_[kFfiNativeTypeCid] = fake_handle.vtable();
   }
 
-#define INIT_VTABLE(clazz)                                                     \
-  {                                                                            \
-    Instance fake_handle;                                                      \
-    builtin_vtables_[kFfi##clazz##Cid] = fake_handle.vtable();                 \
+#define INIT_VTABLE(clazz)                                     \
+  {                                                            \
+    Instance fake_handle;                                      \
+    builtin_vtables_[kFfi##clazz##Cid] = fake_handle.vtable(); \
   }
   CLASS_LIST_FFI_TYPE_MARKER(INIT_VTABLE)
 #undef INIT_VTABLE
@@ -687,17 +693,17 @@ void Object::InitVtables() {
     builtin_vtables_[kDynamicLibraryCid] = fake_handle.vtable();
   }
 
-#define INIT_VTABLE(clazz)                                                     \
-  {                                                                            \
-    TypedData fake_internal_handle;                                            \
-    builtin_vtables_[kTypedData##clazz##Cid] = fake_internal_handle.vtable();  \
-    TypedDataView fake_view_handle;                                            \
-    builtin_vtables_[kTypedData##clazz##ViewCid] = fake_view_handle.vtable();  \
-    builtin_vtables_[kUnmodifiableTypedData##clazz##ViewCid] =                 \
-        fake_view_handle.vtable();                                             \
-    ExternalTypedData fake_external_handle;                                    \
-    builtin_vtables_[kExternalTypedData##clazz##Cid] =                         \
-        fake_external_handle.vtable();                                         \
+#define INIT_VTABLE(clazz)                                                    \
+  {                                                                           \
+    TypedData fake_internal_handle;                                           \
+    builtin_vtables_[kTypedData##clazz##Cid] = fake_internal_handle.vtable(); \
+    TypedDataView fake_view_handle;                                           \
+    builtin_vtables_[kTypedData##clazz##ViewCid] = fake_view_handle.vtable(); \
+    builtin_vtables_[kUnmodifiableTypedData##clazz##ViewCid] =                \
+        fake_view_handle.vtable();                                            \
+    ExternalTypedData fake_external_handle;                                   \
+    builtin_vtables_[kExternalTypedData##clazz##Cid] =                        \
+        fake_external_handle.vtable();                                        \
   }
   CLASS_LIST_TYPED_DATA(INIT_VTABLE)
 #undef INIT_VTABLE
@@ -730,7 +736,7 @@ void Object::Init(IsolateGroup* isolate_group) {
   InitVtables();
 
 // Allocate the read only object handles here.
-#define INITIALIZE_SHARED_READONLY_HANDLE(Type, name)                          \
+#define INITIALIZE_SHARED_READONLY_HANDLE(Type, name) \
   name##_ = Type::ReadOnlyHandle();
   SHARED_READONLY_HANDLES_LIST(INITIALIZE_SHARED_READONLY_HANDLE)
 #undef INITIALIZE_SHARED_READONLY_HANDLE
@@ -1464,8 +1470,8 @@ class FinalizeVMIsolateVisitor : public ObjectVisitor {
 #endif
 };
 
-#define SET_CLASS_NAME(class_name, name)                                       \
-  cls = class_name##_class();                                                  \
+#define SET_CLASS_NAME(class_name, name) \
+  cls = class_name##_class();            \
   cls.set_name(Symbols::name());
 
 void Object::FinalizeVMIsolate(IsolateGroup* isolate_group) {
@@ -2055,6 +2061,20 @@ ErrorPtr Object::Init(IsolateGroup* isolate_group,
     RegisterPrivateClass(cls, Symbols::_ConstSet(), lib);
     pending_classes.Add(cls);
 
+    lib = Library::LookupLibrary(thread, Symbols::DartFiber());
+    if (lib.IsNull()) {
+      lib = Library::NewLibraryHelper(Symbols::DartFiber(), true);
+      lib.SetLoadRequested();
+      lib.Register(thread);
+    }
+    object_store->set_bootstrap_library(ObjectStore::kFiber, lib);
+    ASSERT(!lib.IsNull());
+    ASSERT(lib.ptr() == Library::FiberLibrary());
+
+    cls = Class::New<Coroutine, RTN::Coroutine>(isolate_group);
+    RegisterPrivateClass(cls, Symbols::_Coroutine(), lib);
+    pending_classes.Add(cls);
+
     // Pre-register the async library so we can place the vm class
     // FutureOr there rather than the core library.
     lib = Library::LookupLibrary(thread, Symbols::DartAsync());
@@ -2109,8 +2129,8 @@ ErrorPtr Object::Init(IsolateGroup* isolate_group,
     object_store->set_bootstrap_library(ObjectStore::kTypedData, lib);
     ASSERT(!lib.IsNull());
     ASSERT(lib.ptr() == Library::TypedDataLibrary());
-#define REGISTER_TYPED_DATA_CLASS(clazz)                                       \
-  cls = Class::NewTypedDataClass(kTypedData##clazz##ArrayCid, isolate_group);  \
+#define REGISTER_TYPED_DATA_CLASS(clazz)                                      \
+  cls = Class::NewTypedDataClass(kTypedData##clazz##ArrayCid, isolate_group); \
   RegisterPrivateClass(cls, Symbols::_##clazz##List(), lib);
 
     DART_CLASS_LIST_TYPED_DATA(REGISTER_TYPED_DATA_CLASS);
@@ -2136,9 +2156,9 @@ ErrorPtr Object::Init(IsolateGroup* isolate_group,
     pending_classes.Add(cls);
 
 #undef REGISTER_TYPED_DATA_VIEW_CLASS
-#define REGISTER_EXT_TYPED_DATA_CLASS(clazz)                                   \
-  cls = Class::NewExternalTypedDataClass(kExternalTypedData##clazz##Cid,       \
-                                         isolate_group);                       \
+#define REGISTER_EXT_TYPED_DATA_CLASS(clazz)                             \
+  cls = Class::NewExternalTypedDataClass(kExternalTypedData##clazz##Cid, \
+                                         isolate_group);                 \
   RegisterPrivateClass(cls, Symbols::_External##clazz(), lib);
 
     cls = Class::New<Instance, RTN::Instance>(kByteBufferCid, isolate_group,
@@ -2366,11 +2386,11 @@ ErrorPtr Object::Init(IsolateGroup* isolate_group,
     object_store->set_ffi_native_type_class(cls);
     RegisterClass(cls, Symbols::FfiNativeType(), lib);
 
-#define REGISTER_FFI_TYPE_MARKER(clazz)                                        \
-  cls = Class::New<Instance, RTN::Instance>(kFfi##clazz##Cid, isolate_group);  \
-  cls.set_num_type_arguments_unsafe(0);                                        \
-  cls.set_is_prefinalized();                                                   \
-  pending_classes.Add(cls);                                                    \
+#define REGISTER_FFI_TYPE_MARKER(clazz)                                       \
+  cls = Class::New<Instance, RTN::Instance>(kFfi##clazz##Cid, isolate_group); \
+  cls.set_num_type_arguments_unsafe(0);                                       \
+  cls.set_is_prefinalized();                                                  \
+  pending_classes.Add(cls);                                                   \
   RegisterClass(cls, Symbols::Ffi##clazz(), lib);
     CLASS_LIST_FFI_TYPE_MARKER(REGISTER_FFI_TYPE_MARKER);
 #undef REGISTER_FFI_TYPE_MARKER
@@ -2509,7 +2529,7 @@ ErrorPtr Object::Init(IsolateGroup* isolate_group,
     cls = Class::New<Float64x2, RTN::Float64x2>(isolate_group);
     object_store->set_float64x2_class(cls);
 
-#define REGISTER_TYPED_DATA_CLASS(clazz)                                       \
+#define REGISTER_TYPED_DATA_CLASS(clazz) \
   cls = Class::NewTypedDataClass(kTypedData##clazz##Cid, isolate_group);
     CLASS_LIST_TYPED_DATA(REGISTER_TYPED_DATA_CLASS);
 #undef REGISTER_TYPED_DATA_CLASS
@@ -2523,8 +2543,8 @@ ErrorPtr Object::Init(IsolateGroup* isolate_group,
     cls = Class::NewTypedDataViewClass(kByteDataViewCid, isolate_group);
     cls = Class::NewUnmodifiableTypedDataViewClass(kUnmodifiableByteDataViewCid,
                                                    isolate_group);
-#define REGISTER_EXT_TYPED_DATA_CLASS(clazz)                                   \
-  cls = Class::NewExternalTypedDataClass(kExternalTypedData##clazz##Cid,       \
+#define REGISTER_EXT_TYPED_DATA_CLASS(clazz)                             \
+  cls = Class::NewExternalTypedDataClass(kExternalTypedData##clazz##Cid, \
                                          isolate_group);
     CLASS_LIST_TYPED_DATA(REGISTER_EXT_TYPED_DATA_CLASS);
 #undef REGISTER_EXT_TYPED_DATA_CLASS
@@ -2532,7 +2552,7 @@ ErrorPtr Object::Init(IsolateGroup* isolate_group,
     cls = Class::New<Instance, RTN::Instance>(kFfiNativeTypeCid, isolate_group);
     object_store->set_ffi_native_type_class(cls);
 
-#define REGISTER_FFI_CLASS(clazz)                                              \
+#define REGISTER_FFI_CLASS(clazz) \
   cls = Class::New<Instance, RTN::Instance>(kFfi##clazz##Cid, isolate_group);
     CLASS_LIST_FFI_TYPE_MARKER(REGISTER_FFI_CLASS);
 #undef REGISTER_FFI_CLASS
@@ -2588,6 +2608,7 @@ ErrorPtr Object::Init(IsolateGroup* isolate_group,
     cls = Class::New<SendPort, RTN::SendPort>(isolate_group);
     cls = Class::New<StackTrace, RTN::StackTrace>(isolate_group);
     cls = Class::New<SuspendState, RTN::SuspendState>(isolate_group);
+    cls = Class::New<Coroutine, RTN::Coroutine>(isolate_group);
     cls = Class::New<RegExp, RTN::RegExp>(isolate_group);
     cls = Class::New<Number, RTN::Number>(isolate_group);
 
@@ -2949,18 +2970,18 @@ bool Class::HasCompressedPointers() const {
   switch (cid) {
     case kByteBufferCid:
       return ByteBuffer::ContainsCompressedPointers();
-#define HANDLE_CASE(clazz)                                                     \
-  case k##clazz##Cid:                                                          \
+#define HANDLE_CASE(clazz) \
+  case k##clazz##Cid:      \
     return dart::clazz::ContainsCompressedPointers();
       CLASS_LIST(HANDLE_CASE)
 #undef HANDLE_CASE
-#define HANDLE_CASE(clazz)                                                     \
-  case kTypedData##clazz##Cid:                                                 \
-    return dart::TypedData::ContainsCompressedPointers();                      \
-  case kTypedData##clazz##ViewCid:                                             \
-  case kUnmodifiableTypedData##clazz##ViewCid:                                 \
-    return dart::TypedDataView::ContainsCompressedPointers();                  \
-  case kExternalTypedData##clazz##Cid:                                         \
+#define HANDLE_CASE(clazz)                                    \
+  case kTypedData##clazz##Cid:                                \
+    return dart::TypedData::ContainsCompressedPointers();     \
+  case kTypedData##clazz##ViewCid:                            \
+  case kUnmodifiableTypedData##clazz##ViewCid:                \
+    return dart::TypedDataView::ContainsCompressedPointers(); \
+  case kExternalTypedData##clazz##Cid:                        \
     return dart::ExternalTypedData::ContainsCompressedPointers();
       CLASS_LIST_TYPED_DATA(HANDLE_CASE)
 #undef HANDLE_CASE
@@ -5543,6 +5564,8 @@ const char* Class::GenerateUserVisibleName() const {
     case kImmutableArrayCid:
     case kGrowableObjectArrayCid:
       return Symbols::List().ToCString();
+    case kCoroutineCid:
+      return Symbols::_Coroutine().ToCString();
   }
   String& name = String::Handle(Name());
   name = Symbols::New(Thread::Current(), String::ScrubName(name));
@@ -9091,12 +9114,12 @@ bool Function::RecognizedKindForceOptimize() const {
     // arrays, which requires optimization for payload extraction.
     case MethodRecognizer::kObjectArrayGetIndexed:
     case MethodRecognizer::kGrowableArrayGetIndexed:
-#define TYPED_DATA_GET_INDEXED_CASES(clazz)                                    \
-  case MethodRecognizer::k##clazz##ArrayGetIndexed:                            \
-    FALL_THROUGH;                                                              \
-  case MethodRecognizer::kExternal##clazz##ArrayGetIndexed:                    \
-    FALL_THROUGH;                                                              \
-  case MethodRecognizer::k##clazz##ArrayViewGetIndexed:                        \
+#define TYPED_DATA_GET_INDEXED_CASES(clazz)                 \
+  case MethodRecognizer::k##clazz##ArrayGetIndexed:         \
+    FALL_THROUGH;                                           \
+  case MethodRecognizer::kExternal##clazz##ArrayGetIndexed: \
+    FALL_THROUGH;                                           \
+  case MethodRecognizer::k##clazz##ArrayViewGetIndexed:     \
     FALL_THROUGH;
       DART_CLASS_LIST_TYPED_DATA(TYPED_DATA_GET_INDEXED_CASES)
 #undef TYPED_DATA_GET_INDEXED_CASES
@@ -9181,6 +9204,12 @@ bool Function::RecognizedKindForceOptimize() const {
     case MethodRecognizer::kTypedData_memMove4:
     case MethodRecognizer::kTypedData_memMove8:
     case MethodRecognizer::kTypedData_memMove16:
+    case MethodRecognizer::kCoroutine_getCurrent:
+    case MethodRecognizer::kCoroutine_getRegistry:
+    case MethodRecognizer::kCoroutine_getAttributes:
+    case MethodRecognizer::kCoroutine_getIndex:
+    case MethodRecognizer::kCoroutine_getSize:
+    case MethodRecognizer::kCoroutine_setAttributes:
     case MethodRecognizer::kMemCopy:
     // Prevent the GC from running so that the operation is atomic from
     // a GC point of view. Always double check implementation in
@@ -14781,6 +14810,10 @@ LibraryPtr Library::AsyncLibrary() {
   return IsolateGroup::Current()->object_store()->async_library();
 }
 
+LibraryPtr Library::FiberLibrary() {
+  return IsolateGroup::Current()->object_store()->fiber_library();
+}
+
 LibraryPtr Library::ConvertLibrary() {
   return IsolateGroup::Current()->object_store()->convert_library();
 }
@@ -15367,25 +15400,25 @@ void Library::CheckFunctionFingerprints() {
   Function& func = Function::Handle();
   bool fingerprints_match = true;
 
-#define CHECK_FINGERPRINTS_INNER(class_name, function_name, dest, fp, kind)    \
-  func = GetFunction(all_libs, #class_name, #function_name);                   \
-  if (func.IsNull()) {                                                         \
-    fingerprints_match = false;                                                \
-    OS::PrintErr("Function not found %s.%s\n", #class_name, #function_name);   \
-  } else {                                                                     \
-    fingerprints_match =                                                       \
-        func.CheckSourceFingerprint(fp, kind) && fingerprints_match;           \
+#define CHECK_FINGERPRINTS_INNER(class_name, function_name, dest, fp, kind)  \
+  func = GetFunction(all_libs, #class_name, #function_name);                 \
+  if (func.IsNull()) {                                                       \
+    fingerprints_match = false;                                              \
+    OS::PrintErr("Function not found %s.%s\n", #class_name, #function_name); \
+  } else {                                                                   \
+    fingerprints_match =                                                     \
+        func.CheckSourceFingerprint(fp, kind) && fingerprints_match;         \
   }
 
-#define CHECK_FINGERPRINTS(class_name, function_name, dest, fp)                \
+#define CHECK_FINGERPRINTS(class_name, function_name, dest, fp) \
   CHECK_FINGERPRINTS_INNER(class_name, function_name, dest, fp, nullptr)
-#define CHECK_FINGERPRINTS_ASM_INTRINSIC(class_name, function_name, dest, fp)  \
+#define CHECK_FINGERPRINTS_ASM_INTRINSIC(class_name, function_name, dest, fp) \
   CHECK_FINGERPRINTS_INNER(class_name, function_name, dest, fp, "asm-intrinsic")
-#define CHECK_FINGERPRINTS_GRAPH_INTRINSIC(class_name, function_name, dest,    \
-                                           fp)                                 \
-  CHECK_FINGERPRINTS_INNER(class_name, function_name, dest, fp,                \
+#define CHECK_FINGERPRINTS_GRAPH_INTRINSIC(class_name, function_name, dest, \
+                                           fp)                              \
+  CHECK_FINGERPRINTS_INNER(class_name, function_name, dest, fp,             \
                            "graph-intrinsic")
-#define CHECK_FINGERPRINTS_OTHER(class_name, function_name, dest, fp)          \
+#define CHECK_FINGERPRINTS_OTHER(class_name, function_name, dest, fp) \
   CHECK_FINGERPRINTS_INNER(class_name, function_name, dest, fp, "other")
 
   all_libs.Add(&Library::ZoneHandle(Library::CoreLibrary()));
@@ -15394,6 +15427,7 @@ void Library::CheckFunctionFingerprints() {
   GRAPH_CORE_INTRINSICS_LIST(CHECK_FINGERPRINTS_GRAPH_INTRINSIC);
 
   all_libs.Add(&Library::ZoneHandle(Library::AsyncLibrary()));
+  all_libs.Add(&Library::ZoneHandle(Library::FiberLibrary()));
   all_libs.Add(&Library::ZoneHandle(Library::MathLibrary()));
   all_libs.Add(&Library::ZoneHandle(Library::TypedDataLibrary()));
   all_libs.Add(&Library::ZoneHandle(Library::CollectionLibrary()));
@@ -15418,14 +15452,14 @@ void Library::CheckFunctionFingerprints() {
 #undef CHECK_FINGERPRINTS_GRAPH_INTRINSIC
 #undef CHECK_FINGERPRINTS_OTHER
 
-#define CHECK_FACTORY_FINGERPRINTS(symbol, class_name, factory_name, cid, fp)  \
-  func = GetFunction(all_libs, #class_name, #factory_name);                    \
-  if (func.IsNull()) {                                                         \
-    fingerprints_match = false;                                                \
-    OS::PrintErr("Function not found %s.%s\n", #class_name, #factory_name);    \
-  } else {                                                                     \
-    fingerprints_match =                                                       \
-        func.CheckSourceFingerprint(fp) && fingerprints_match;                 \
+#define CHECK_FACTORY_FINGERPRINTS(symbol, class_name, factory_name, cid, fp) \
+  func = GetFunction(all_libs, #class_name, #factory_name);                   \
+  if (func.IsNull()) {                                                        \
+    fingerprints_match = false;                                               \
+    OS::PrintErr("Function not found %s.%s\n", #class_name, #factory_name);   \
+  } else {                                                                    \
+    fingerprints_match =                                                      \
+        func.CheckSourceFingerprint(fp) && fingerprints_match;                \
   }
 
   all_libs.Clear();
@@ -16524,8 +16558,8 @@ void ICData::AddDeoptReason(DeoptReasonId reason) const {
 
 const char* ICData::RebindRuleToCString(RebindRule r) {
   switch (r) {
-#define RULE_CASE(Name)                                                        \
-  case RebindRule::k##Name:                                                    \
+#define RULE_CASE(Name)     \
+  case RebindRule::k##Name: \
     return #Name;
     FOR_EACH_REBIND_RULE(RULE_CASE)
 #undef RULE_CASE
@@ -16535,10 +16569,10 @@ const char* ICData::RebindRuleToCString(RebindRule r) {
 }
 
 bool ICData::ParseRebindRule(const char* str, RebindRule* out) {
-#define RULE_CASE(Name)                                                        \
-  if (strcmp(str, #Name) == 0) {                                               \
-    *out = RebindRule::k##Name;                                                \
-    return true;                                                               \
+#define RULE_CASE(Name)          \
+  if (strcmp(str, #Name) == 0) { \
+    *out = RebindRule::k##Name;  \
+    return true;                 \
   }
   FOR_EACH_REBIND_RULE(RULE_CASE)
 #undef RULE_CASE
@@ -18221,7 +18255,8 @@ CodePtr Code::FindCode(uword pc, int64_t timestamp) {
 CodePtr Code::FindCodeUnsafe(uword pc) {
   class FindCodeUnsafeVisitor : public ObjectVisitor {
    public:
-    explicit FindCodeUnsafeVisitor(uword pc) : pc_(pc), result_(Code::null()) {}
+    explicit FindCodeUnsafeVisitor(uword pc)
+        : pc_(pc), result_(Code::null()) {}
 
     void VisitObject(ObjectPtr obj) {
       if (obj->IsCode()) {
@@ -21511,10 +21546,10 @@ bool AbstractType::IsTypeClassAllowedBySpawnUri() const {
   const auto& typed_data_lib =
       Library::Handle(object_store->typed_data_library());
 
-#define IS_CHECK(name)                                                         \
-  candidate_cls = typed_data_lib.LookupClass(Symbols::name##List());           \
-  if (cid == candidate_cls.id()) {                                             \
-    return true;                                                               \
+#define IS_CHECK(name)                                               \
+  candidate_cls = typed_data_lib.LookupClass(Symbols::name##List()); \
+  if (cid == candidate_cls.id()) {                                   \
+    return true;                                                     \
   }
   DART_CLASS_LIST_TYPED_DATA(IS_CHECK)
 #undef IS_CHECK
@@ -24286,13 +24321,13 @@ static bool EqualsIgnoringPrivateKey(const String& str1, const String& str2) {
   return (str2_pos == str2_len);
 }
 
-#define EQUALS_IGNORING_PRIVATE_KEY(class_id, type, str1, str2)                \
-  switch (class_id) {                                                          \
-    case kOneByteStringCid:                                                    \
-      return dart::EqualsIgnoringPrivateKey<type, OneByteString>(str1, str2);  \
-    case kTwoByteStringCid:                                                    \
-      return dart::EqualsIgnoringPrivateKey<type, TwoByteString>(str1, str2);  \
-  }                                                                            \
+#define EQUALS_IGNORING_PRIVATE_KEY(class_id, type, str1, str2)               \
+  switch (class_id) {                                                         \
+    case kOneByteStringCid:                                                   \
+      return dart::EqualsIgnoringPrivateKey<type, OneByteString>(str1, str2); \
+    case kTwoByteStringCid:                                                   \
+      return dart::EqualsIgnoringPrivateKey<type, TwoByteString>(str1, str2); \
+  }                                                                           \
   UNREACHABLE();
 
 bool String::EqualsIgnoringPrivateKey(const String& str1, const String& str2) {
@@ -25021,6 +25056,22 @@ ObjectPtr GrowableObjectArray::RemoveLast() const {
   contents.SetAt(index, Object::null_object());
   SetLength(index);
   return obj.ptr();
+}
+
+ObjectPtr GrowableObjectArray::RemoveAt(intptr_t index) const {
+  ASSERT(!IsNull());
+  ASSERT(Length() > 0);
+  intptr_t last = Length() - 1;
+  if (index < last) {
+    Swap(index, last);
+  }
+  return RemoveLast();
+}
+
+void GrowableObjectArray::Swap(intptr_t i, intptr_t j) const {
+  auto temp = At(i);
+  data()->untag()->set_element(i, At(j));
+  data()->untag()->set_element(j, temp);
 }
 
 GrowableObjectArrayPtr GrowableObjectArray::New(intptr_t capacity,
@@ -26608,6 +26659,235 @@ CodePtr SuspendState::GetCodeObject() const {
 #endif  // defined(DART_PRECOMPILED_RUNTIME)
 }
 
+CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
+  GcSafepointOperationScope safepoint(Thread::Current());
+  auto isolate = Isolate::Current();
+//  auto finished = isolate->finished_coroutines();
+//  auto active = isolate->active_coroutines();
+  auto& registry = GrowableObjectArray::Handle(isolate->coroutines_registry());
+
+  auto page_size = VirtualMemory::PageSize();
+  auto stack_size = (size + page_size - 1) & ~(page_size - 1);
+
+//   if (finished->IsNotEmpty()) {
+//     auto& coroutine = Coroutine::Handle(finished->Next()->Value());
+//     coroutine.change_state(CoroutineAttributes::finished, CoroutineAttributes::created);
+//     CoroutineLink::StealHead(active, coroutine.to_state());
+//     coroutine.untag()->set_trampoline(trampoline);
+//     if (UNLIKELY(stack_size != coroutine.stack_size())) {
+// #if defined(DART_TARGET_OS_WINDOWS)
+//       VirtualFree((void*)stack_limit(), 0, MEM_RELEASE);
+// #else
+//       munmap((void*)coroutine.untag()->stack_limit(), coroutine.untag()->stack_size());
+// #endif
+// #if defined(DART_TARGET_OS_WINDOWS)
+//       void* stack_base = (void*)((uintptr_t)VirtualAlloc(
+//           nullptr, stack_size, MEM_RESERVE | MEM_COMMIT,
+//           PAGE_READWRITE));
+// #else
+//       void* stack_end = (void*)((uintptr_t)mmap(
+//           nullptr, stack_size, PROT_READ | PROT_WRITE | PROT_EXEC,
+//           MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+// #endif
+//       auto stack_limit = (uword)stack_end;
+//       auto stack_base = (uword)(stack_size + (char*)stack_end);
+//       coroutine.untag()->stack_size_ = stack_size;
+//       coroutine.untag()->stack_root_ = stack_base;
+//       coroutine.untag()->stack_base_ = stack_base;
+//       coroutine.untag()->stack_limit_ = stack_limit;
+//       coroutine.untag()->overflow_stack_limit_ = stack_limit + CalculateHeadroom(stack_base - stack_limit);
+//     }
+//     return coroutine.ptr();
+//   }
+
+  const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
+#if defined(DART_TARGET_OS_WINDOWS)
+  void* stack_base = (void*)((uintptr_t)VirtualAlloc(
+      nullptr, stack_size, MEM_RESERVE | MEM_COMMIT,
+      PAGE_READWRITE));
+#else
+  void* stack_end = (void*)((uintptr_t)mmap(
+      nullptr, stack_size, PROT_READ | PROT_WRITE | PROT_EXEC,
+      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+#endif
+  auto stack_limit = (uword)(stack_end);
+  auto stack_base = (uword)(stack_size + (char*)stack_end);
+
+  coroutine.untag()->stack_size_ = stack_size;
+  coroutine.untag()->native_stack_base_ = (uword) nullptr;
+  coroutine.untag()->stack_root_ = stack_base;
+  coroutine.untag()->stack_base_ = stack_base;
+  coroutine.untag()->stack_limit_ = stack_limit;
+  coroutine.untag()->overflow_stack_limit_ = stack_limit + CalculateHeadroom(stack_base - stack_limit);
+  // coroutine.untag()->to_state_.Initialize();
+  // coroutine.untag()->to_state_.SetValue(coroutine.ptr());
+  coroutine.untag()->set_trampoline(trampoline);
+
+  coroutine.untag()->set_index(registry.Length());
+  registry.Add(coroutine);
+
+  //CoroutineLink::AddHead(active, coroutine.to_state());
+
+  return coroutine.ptr();
+}
+
+void Coroutine::recycle(Zone* zone) const {
+  change_state(CoroutineAttributes::created | CoroutineAttributes::running | CoroutineAttributes::suspended, CoroutineAttributes::finished);
+  //auto finished = Isolate::Current()->finished_coroutines();
+  untag()->stack_base_ = untag()->stack_root_;
+  untag()->native_stack_base_ = (uword) nullptr;
+  //CoroutineLink::StealHead(finished, to_state());
+}
+
+void Coroutine::dispose(Thread* thread, Zone* zone, bool remove_from_registry) const {
+  change_state(CoroutineAttributes::created | CoroutineAttributes::running | CoroutineAttributes::suspended, CoroutineAttributes::disposed);
+//  CoroutineLink::Remove(to_state());
+  untag()->set_name(String::null());
+  untag()->set_entry(Closure::null());
+  untag()->set_trampoline(Function::null());
+  untag()->set_argument(Object::null());
+  untag()->set_caller(Coroutine::null());
+  untag()->set_scheduler(Coroutine::null());
+  untag()->set_processor(Object::null());
+  untag()->set_to_processor_next(Coroutine::null());
+  untag()->set_to_processor_previous(Coroutine::null());
+#if defined(DART_TARGET_OS_WINDOWS)
+  VirtualFree((void*)untag()->stack_limit(), 0, MEM_RELEASE);
+#else
+  munmap((void*)untag()->stack_limit(), untag()->stack_size());
+#endif
+  untag()->stack_size_ = (uword)0;
+  untag()->native_stack_base_ = (uword) nullptr;
+  untag()->stack_root_ = (uword) nullptr;
+  untag()->stack_base_ = (uword) nullptr;
+  untag()->stack_limit_ = (uword) nullptr;
+  untag()->overflow_stack_limit_ = (uword) nullptr;
+  untag()->set_index(-1);
+
+  // if (!remove_from_registry) {
+  //   untag()->set_index(-1);
+  //   return;
+  // }
+
+  // auto& coroutines = GrowableObjectArray::Handle(zone, thread->isolate()->coroutines_registry());
+  // coroutines.RemoveAt(index());
+  // untag()->set_index(-1);
+
+  // if (coroutines.Capacity() < FLAG_coroutines_registry_shrink_capacity) {
+  //   return;
+  // }
+
+  // auto& new_coroutines = GrowableObjectArray::Handle(GrowableObjectArray::New(std::max(coroutines.Length(), (intptr_t)FLAG_coroutines_registry_initial_capacity)));
+  // auto& new_coroutine = Coroutine::Handle();
+  // for (intptr_t index = 0; index < coroutines.Length(); index++) {
+  //   new_coroutine ^= coroutines.At(index);
+  //   new_coroutine.set_index(new_coroutines.Length());
+  //   new_coroutines.Add(new_coroutine);
+  // }
+  // Array::Handle(coroutines.data()).Truncate(0);
+  // thread->isolate()->set_coroutines_registry(new_coroutines.ptr());
+}
+
+const char* Coroutine::ToCString() const {
+  auto thread = Thread::Current();
+  auto zone = thread->zone();
+  ZoneTextBuffer buffer(zone);
+  buffer.Printf("Coroutine: name: %s", String::Handle(name()).ToCString());
+  return buffer.buffer();
+}
+
+void Coroutine::HandleJumpToFrame(Thread* thread, uword stack_pointer) {
+  GcSafepointOperationScope safepoint(Thread::Current());
+  auto zone = thread->zone();
+  auto& coroutines = GrowableObjectArray::Handle(zone, thread->isolate()->coroutines_registry());
+  auto& found = Coroutine::Handle(zone);
+  for (auto index = 0; index < coroutines.Length(); index++) {
+    auto candidate = Coroutine::RawCast(coroutines.At(index));
+    if (stack_pointer > candidate.untag()->stack_limit() && stack_pointer <= candidate.untag()->stack_root()) {
+      found ^= candidate;
+      break;
+    }
+  }
+  if (found.IsNull()) {
+    HandleRootExit(thread, zone);
+    return;
+  }
+  if (found.ptr() == ptr()) {
+    return;
+  }
+  if (is_persistent()) {
+    recycle(zone);
+  }
+  if (is_ephemeral()) {
+    dispose(thread, zone);
+  }
+  found.change_state(CoroutineAttributes::suspended, CoroutineAttributes::running);
+  thread->EnterCoroutine(found.ptr());
+}
+
+void Coroutine::HandleRootEnter(Thread* thread, Zone* zone) {
+  GcSafepointOperationScope safepoint(Thread::Current());
+  thread->EnterCoroutine(ptr());
+}
+
+void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
+  GcSafepointOperationScope safepoint(Thread::Current());
+  auto& coroutines = GrowableObjectArray::Handle(zone, thread->isolate()->coroutines_registry());
+  auto& coroutine = Coroutine::Handle(zone);
+
+  intptr_t recycled_count = 0;
+  for (auto index = 0; index < coroutines.Length(); index++) {
+    coroutine ^= coroutines.At(index);
+    if (coroutine.is_persistent() && !coroutine.is_finished()) {
+      coroutine.recycle(zone);
+      recycled_count++;
+      continue;
+    }
+    if (coroutine.is_ephemeral() && !coroutine.is_disposed()) {
+      coroutine.dispose(thread, zone, false);
+    }
+  }
+
+  if (recycled_count != 0) {
+    auto& recycled = GrowableObjectArray::Handle(GrowableObjectArray::New(std::max(recycled_count, (intptr_t)FLAG_coroutines_registry_initial_capacity)));
+    for (auto index = 0; index < coroutines.Length(); index++) {
+      coroutine ^= coroutines.At(index);
+      if (coroutine.is_finished()) {
+        coroutine.set_index(recycled.Length());
+        recycled.Add(coroutine);
+      }
+    }
+    thread->isolate()->set_coroutines_registry(recycled.ptr());
+    thread->ExitCoroutine();
+    return;
+  }
+
+  Array::Handle(coroutines.data()).Truncate(0);
+  thread->isolate()->set_coroutines_registry(GrowableObjectArray::New(FLAG_coroutines_registry_initial_capacity));
+  thread->ExitCoroutine();
+}
+
+void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
+  GcSafepointOperationScope safepoint(Thread::Current());
+//  auto active = Isolate::Current()->active_coroutines();
+  //CoroutineLink::StealHead(active, to_state());
+  thread->EnterCoroutine(ptr());
+}
+
+void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
+  GcSafepointOperationScope safepoint(Thread::Current());
+  auto saved_caller = caller();
+  auto new_caller_state = (saved_caller->untag()->attributes() & ~CoroutineAttributes::suspended) | CoroutineAttributes::running;
+  saved_caller->untag()->set_attributes(new_caller_state);
+  if (is_persistent()) {
+    recycle(zone);
+  }
+  if (is_ephemeral()) {
+    dispose(thread, zone);
+  }
+  thread->EnterCoroutine(saved_caller);
+}
+
 void RegExp::set_pattern(const String& pattern) const {
   untag()->set_pattern(pattern.ptr());
 }
@@ -27245,7 +27525,7 @@ ErrorPtr EntryPointMemberInvocationError(const Object& member) {
 // never land in a function which expects parameters in registers from a
 // dynamic call site.
 intptr_t Function::MaxNumberOfParametersInRegisters(Zone* zone) const {
-#if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_ARM64) ||                  \
+#if defined(TARGET_ARCH_X64) || defined(TARGET_ARCH_ARM64) || \
     defined(TARGET_ARCH_ARM)
   if (!FLAG_precompiled_mode) {
     return 0;

@@ -318,7 +318,7 @@ class FlowGraphBuilder : public BaseFlowGraphBuilder {
 
   // Loads the (untagged) current ObjectStore address.
   Fragment LoadObjectStore();
-
+  
   // Loads the (untagged) service extension stream address.
   Fragment LoadServiceExtensionStream();
 
@@ -414,7 +414,13 @@ class FlowGraphBuilder : public BaseFlowGraphBuilder {
   // Generates Call1ArgStub instruction.
   Fragment Call1ArgStub(TokenPosition position,
                         Call1ArgStubInstr::StubId stub_id);
-
+  
+  Fragment CoroutineInitialize();
+  
+  Fragment CoroutineTransfer();
+ 
+  Fragment CoroutineFork();
+  
   // Generates Suspend instruction.
   Fragment Suspend(TokenPosition position, SuspendInstr::StubId stub_id);
 

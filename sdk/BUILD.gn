@@ -21,10 +21,12 @@ import("../utils/application_snapshot.gni")
 declare_args() {
   # Build a SDK with less stuff. It excludes dart2js, ddc, and web libraries.
   dart_platform_sdk = true
+  dart_use_precompiled_runtime_product = !dart_debug
 
   # Path to stripped dart binaries relative to build output directory.
   dart_stripped_binary = "dart"
   dart_precompiled_runtime_stripped_binary = "dart_precompiled_runtime_product"
+  dart_precompiled_runtime_binary = "dart_precompiled_runtime"
   gen_snapshot_stripped_binary = "gen_snapshot_product"
   analyze_snapshot_binary = "analyze_snapshot"
   wasm_opt_stripped_binary = "wasm-opt"
@@ -162,6 +164,7 @@ _full_sdk_snapshots = _platform_sdk_snapshots + [
 _full_sdk_libraries = [
   "_internal",
   "async",
+  "fiber",
   "cli",
   "collection",
   "convert",
@@ -298,12 +301,21 @@ if (target_os != current_os && target_os == "fuchsia") {
 
 copy("copy_dartaotruntime") {
   visibility = [ ":group_dart2native" ]
-  deps = [ "../runtime/bin:dart_precompiled_runtime_product" ]
-  src_dir = get_label_info("../runtime/bin:dart_precompiled_runtime_product",
-                           "root_out_dir")
-  sources = [
-    "$src_dir/${dart_precompiled_runtime_stripped_binary}${executable_suffix}",
-  ]
+  if (dart_use_precompiled_runtime_product) {
+    deps = [ "../runtime/bin:dart_precompiled_runtime_product" ]
+    src_dir = get_label_info("../runtime/bin:dart_precompiled_runtime_product",
+                            "root_out_dir")
+    sources = [
+      "$src_dir/${dart_precompiled_runtime_stripped_binary}${executable_suffix}",
+    ]
+  } else {
+    deps = [ "../runtime/bin:dart_precompiled_runtime" ]
+    src_dir = get_label_info("../runtime/bin:dart_precompiled_runtime",
+                            "root_out_dir")
+    sources = [
+      "$src_dir/${dart_precompiled_runtime_binary}${executable_suffix}",
+    ]
+  }
   outputs = [
     "$root_out_dir/$dart_sdk_output/bin/dartaotruntime${executable_suffix}",
   ]

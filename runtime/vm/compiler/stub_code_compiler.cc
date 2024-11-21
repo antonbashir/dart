@@ -1700,9 +1700,9 @@ EMIT_BOX_ALLOCATION(Int32x4)
 static void GenerateBoxFpuValueStub(Assembler* assembler,
                                     const dart::Class& cls,
                                     const RuntimeEntry& runtime_entry,
-                                    void (Assembler::* store_value)(FpuRegister,
-                                                                    Register,
-                                                                    int32_t)) {
+                                    void (Assembler::*store_value)(FpuRegister,
+                                                                   Register,
+                                                                   int32_t)) {
   Label call_runtime;
   if (!FLAG_use_slow_path && FLAG_inline_alloc) {
     __ TryAllocate(cls, &call_runtime, compiler::Assembler::kFarJump,
@@ -3231,6 +3231,147 @@ void StubCodeCompiler::GenerateSubtypeTestCacheSearch(
       gen_found, gen_not_found);
 }
 #endif
+
+void StubCodeCompiler::GenerateCoroutineInitializeStub() {
+   const Register kCoroutine = CoroutineInitializeABI::kCoroutineReg;
+   
+ #if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
+  SPILLS_LR_TO_FRAME({});
+#endif
+  __ EnterStubFrame();
+
+  __ PushObject(compiler::NullObject());
+  __ PushRegister(kCoroutine);
+  __ CallRuntime(kEnterCoroutineRuntimeEntry, 1);
+  __ PopRegister(kCoroutine);
+  __ Drop(1);
+
+  __ PushRegister(FPREG);
+  __ StoreCompressedIntoObjectOffset(kCoroutine, Coroutine::native_stack_base_offset(), SPREG);
+
+  __ LoadFieldFromOffset(SPREG, kCoroutine, Coroutine::stack_base_offset());
+  __ PushRegister(kCoroutine);
+
+  __ LoadCompressedFieldFromOffset(FUNCTION_REG, kCoroutine, Coroutine::trampoline_offset());
+  if (!FLAG_precompiled_mode) {
+    __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG, Function::code_offset());
+    __ LoadImmediate(ARGS_DESC_REG, 0);
+  }
+  __ Call(compiler::FieldAddress(FUNCTION_REG, Function::entry_point_offset()));
+
+  __ PopRegister(kCoroutine);
+  __ StoreCompressedIntoObjectOffset(kCoroutine, Coroutine::stack_base_offset(), SPREG);
+
+  __ LoadFieldFromOffset(SPREG, kCoroutine, Coroutine::native_stack_base_offset());
+  __ PopRegister(FPREG);
+  if (!FLAG_precompiled_mode) __ RestoreCodePointer();
+  if (FLAG_precompiled_mode)  __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
+
+  __ PushObject(compiler::NullObject());
+  __ CallRuntime(kExitCoroutineRuntimeEntry, 0);
+  __ Drop(1);
+
+  __ LeaveStubFrame();
+
+  __ Ret();
+}
+
+void StubCodeCompiler::GenerateCoroutineForkStub() {
+  const Register kCallerCoroutine = CoroutineForkABI::kCallerCoroutineReg;
+  const Register kForkedCoroutine = CoroutineForkABI::kForkedCoroutineReg;
+
+#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
+  SPILLS_LR_TO_FRAME({});
+#endif
+  __ EnterStubFrame();
+
+  __ PushObject(compiler::NullObject());
+  __ PushRegister(kForkedCoroutine);
+  __ CallRuntime(kEnterForkedCoroutineRuntimeEntry, 1);
+  __ PopRegister(kForkedCoroutine);
+  __ Drop(1);
+
+  __ LoadCompressedFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
+
+  __ PushRegister(FPREG);
+  __ StoreCompressedIntoObjectOffset(kCallerCoroutine, Coroutine::stack_base_offset(), SPREG);
+
+  __ LoadFieldFromOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
+  __ PushRegister(kForkedCoroutine);
+
+  __ LoadCompressedFieldFromOffset(FUNCTION_REG, kForkedCoroutine, Coroutine::trampoline_offset());
+  if (!FLAG_precompiled_mode) {
+    __ LoadCompressedFieldFromOffset(CODE_REG, FUNCTION_REG, Function::code_offset());
+    __ LoadImmediate(ARGS_DESC_REG, 0);
+  }
+  __ LoadCompressedField(TMP, compiler::FieldAddress(FUNCTION_REG, Function::entry_point_offset()));
+  __ call(TMP);
+  
+  __ PopRegister(kForkedCoroutine);
+  __ StoreCompressedIntoObjectOffset(kForkedCoroutine, Coroutine::stack_base_offset(), SPREG);
+
+  __ LoadCompressedFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
+
+  __ LoadFieldFromOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
+  __ PopRegister(FPREG);
+  if (!FLAG_precompiled_mode) __ RestoreCodePointer();
+  if (FLAG_precompiled_mode)
+    __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
+
+  __ PushObject(compiler::NullObject());
+  __ CallRuntime(kExitForkedCoroutineRuntimeEntry, 0);
+  __ Drop(1);
+
+  __ LeaveStubFrame();
+
+  __ Ret();
+}
+
+void StubCodeCompiler::GenerateCoroutineTransferStub() {
+  const Register kFromCoroutine = CoroutineTransferABI::kFromCoroutineReg;
+  const Register kToCoroutine = CoroutineTransferABI::kToCoroutineReg;
+  const Register kToStackLimit = CoroutineTransferABI::kToStackLimitReg;
+
+#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
+  SPILLS_LR_TO_FRAME({});
+#endif
+  __ EnterStubFrame();
+
+  __ LoadFieldFromOffset(TMP, kFromCoroutine, Coroutine::attributes_offset());
+  __ AndImmediate(TMP, ~Coroutine::CoroutineAttributes::running);
+  __ OrImmediate(TMP, Coroutine::CoroutineAttributes::suspended);
+  __ StoreFieldToOffset(TMP, kFromCoroutine, Coroutine::attributes_offset());
+
+  __ LoadFieldFromOffset(TMP, kToCoroutine, Coroutine::attributes_offset());
+  __ AndImmediate(TMP, ~Coroutine::CoroutineAttributes::suspended);
+  __ OrImmediate(TMP, Coroutine::CoroutineAttributes::running);
+  __ StoreFieldToOffset(TMP, kToCoroutine, Coroutine::attributes_offset());
+
+  __ PushRegister(FPREG);
+  __ StoreCompressedIntoObjectOffset(kFromCoroutine, Coroutine::stack_base_offset(), SPREG);
+
+  __ LoadFieldFromOffset(SPREG, kToCoroutine, Coroutine::stack_base_offset());
+  __ PopRegister(FPREG);
+  if (!FLAG_precompiled_mode) __ RestoreCodePointer();
+  if (FLAG_precompiled_mode)
+    __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
+
+  __ LoadFieldFromOffset(kToStackLimit, kToCoroutine,
+                         Coroutine::overflow_stack_limit_offset());
+  __ StoreToOffset(kToCoroutine, THR, Thread::coroutine_offset());
+  __ StoreToOffset(kToStackLimit, THR, Thread::saved_stack_limit_offset());
+
+  compiler::Label scheduled_interrupts;
+  __ LoadFromOffset(TMP, THR, Thread::stack_limit_offset());
+  __ testq(TMP, compiler::Immediate(Thread::kInterruptsMask));
+  __ BranchIf(ZERO, &scheduled_interrupts);
+  __ StoreToOffset(kToStackLimit, THR, Thread::stack_limit_offset());
+  __ Bind(&scheduled_interrupts);
+
+  __ LeaveStubFrame();
+
+  __ Ret();
+}
 
 // See comment on [GenerateSubtypeNTestCacheStub].
 void StubCodeCompiler::GenerateSubtype1TestCacheStub() {

@@ -7,6 +7,7 @@
 #include "vm/cpu.h"
 #include "vm/dart_api_state.h"
 #include "vm/growable_array.h"
+#include "vm/heap/freelist.h"
 #include "vm/heap/safepoint.h"
 #include "vm/isolate.h"
 #include "vm/json_stream.h"
@@ -22,9 +23,11 @@
 #include "vm/service.h"
 #include "vm/stub_code.h"
 #include "vm/symbols.h"
+#include "vm/tagged_pointer.h"
 #include "vm/thread_interrupter.h"
 #include "vm/thread_registry.h"
 #include "vm/timeline.h"
+#include "vm/visitor.h"
 #include "vm/zone.h"
 
 namespace dart {
@@ -53,7 +56,7 @@ Thread::~Thread() {
 }
 
 #if defined(DEBUG)
-#define REUSABLE_HANDLE_SCOPE_INIT(object)                                     \
+#define REUSABLE_HANDLE_SCOPE_INIT(object) \
   reusable_##object##_handle_scope_active_(false),
 #else
 #define REUSABLE_HANDLE_SCOPE_INIT(object)
@@ -66,6 +69,8 @@ Thread::Thread(bool is_vm_isolate)
       write_barrier_mask_(UntaggedObject::kGenerationalBarrierMask),
       active_exception_(Object::null()),
       active_stacktrace_(Object::null()),
+      coroutine_(Coroutine::null()),
+      disabled_coroutine_(Coroutine::null()),
       global_object_pool_(ObjectPool::null()),
       resume_pc_(0),
       execution_state_(kThreadInNative),
@@ -108,7 +113,7 @@ Thread::Thread(bool is_vm_isolate)
               next_(nullptr) {
 #endif
 
-#define DEFAULT_INIT(type_name, member_name, init_expr, default_init_value)    \
+#define DEFAULT_INIT(type_name, member_name, init_expr, default_init_value) \
   member_name = default_init_value;
   CACHED_CONSTANTS_LIST(DEFAULT_INIT)
 #undef DEFAULT_INIT
@@ -185,13 +190,13 @@ void Thread::InitVMConstants() {
   heap_base_ = Object::null()->heap_base();
 #endif
 
-#define ASSERT_VM_HEAP(type_name, member_name, init_expr, default_init_value)  \
+#define ASSERT_VM_HEAP(type_name, member_name, init_expr, default_init_value) \
   ASSERT((init_expr)->IsOldObject());
   CACHED_VM_OBJECTS_LIST(ASSERT_VM_HEAP)
 #undef ASSERT_VM_HEAP
 
-#define INIT_VALUE(type_name, member_name, init_expr, default_init_value)      \
-  ASSERT(member_name == default_init_value);                                   \
+#define INIT_VALUE(type_name, member_name, init_expr, default_init_value) \
+  ASSERT(member_name == default_init_value);                              \
   member_name = (init_expr);
   CACHED_CONSTANTS_LIST(INIT_VALUE)
 #undef INIT_VALUE
@@ -202,20 +207,20 @@ void Thread::InitVMConstants() {
         i * kStoreBufferWrapperSize;
   }
 
-#define INIT_VALUE(name)                                                       \
-  ASSERT(name##_entry_point_ == 0);                                            \
+#define INIT_VALUE(name)            \
+  ASSERT(name##_entry_point_ == 0); \
   name##_entry_point_ = k##name##RuntimeEntry.GetEntryPoint();
   RUNTIME_ENTRY_LIST(INIT_VALUE)
 #undef INIT_VALUE
 
-#define INIT_VALUE(returntype, name, ...)                                      \
-  ASSERT(name##_entry_point_ == 0);                                            \
+#define INIT_VALUE(returntype, name, ...) \
+  ASSERT(name##_entry_point_ == 0);       \
   name##_entry_point_ = k##name##RuntimeEntry.GetEntryPoint();
   LEAF_RUNTIME_ENTRY_LIST(INIT_VALUE)
 #undef INIT_VALUE
 
 // Setup the thread specific reusable handles.
-#define REUSABLE_HANDLE_ALLOCATION(object)                                     \
+#define REUSABLE_HANDLE_ALLOCATION(object) \
   this->object##_handle_ = this->AllocateReusableHandle<object>();
   REUSABLE_HANDLE_LIST(REUSABLE_HANDLE_ALLOCATION)
 #undef REUSABLE_HANDLE_ALLOCATION
@@ -236,6 +241,14 @@ ErrorPtr Thread::sticky_error() const {
 void Thread::set_sticky_error(const Error& value) {
   ASSERT(!value.IsNull());
   sticky_error_ = value.ptr();
+}
+
+bool Thread::has_coroutine() const {
+  return coroutine_ != Coroutine::null();
+}
+
+bool Thread::has_disabled_coroutine() const {
+  return disabled_coroutine_ != Coroutine::null();
 }
 
 void Thread::ClearStickyError() {
@@ -312,6 +325,14 @@ void Thread::AssertEmptyStackInvariants() {
     ASSERT(sticky_error() == Error::null());
     ASSERT(active_exception_ == Object::null());
     ASSERT(active_stacktrace_ == Object::null());
+  }
+
+  if (coroutine_.untag() != 0) {
+    ASSERT(coroutine_ == Coroutine::null());
+  }
+
+  if (disabled_coroutine_.untag() != 0) {
+    ASSERT(disabled_coroutine_ == Coroutine::null());
   }
 }
 
@@ -537,6 +558,10 @@ void Thread::ResumeDartMutatorThreadInternal(Thread* thread) {
   ResumeThreadInternal(thread);
   if (Dart::vm_isolate() != nullptr &&
       thread->isolate() != Dart::vm_isolate()) {
+    if (thread->isolate()->HasCoroutine()) {
+      thread->RestoreCoroutine(thread->isolate()->RestoreCoroutine());
+      return;
+    }
 #if defined(USING_SIMULATOR)
     thread->SetStackLimit(Simulator::Current()->overflow_stack_limit());
 #else
@@ -547,6 +572,11 @@ void Thread::ResumeDartMutatorThreadInternal(Thread* thread) {
 
 void Thread::SuspendDartMutatorThreadInternal(Thread* thread,
                                               VMTag::VMTagId tag) {
+  if (thread->has_coroutine()) {
+    thread->isolate()->SaveCoroutine(thread->SaveCoroutine());
+    SuspendThreadInternal(thread, tag);
+    return;
+  }
   thread->ClearStackLimit();
   SuspendThreadInternal(thread, tag);
 }
@@ -665,6 +695,8 @@ void Thread::FreeActiveThread(Thread* thread, bool bypass_safepoint) {
 
   thread->isolate_ = nullptr;
   thread->isolate_group_ = nullptr;
+  thread->coroutine_ = Coroutine::null();
+  thread->disabled_coroutine_ = Coroutine::null();
   thread->scheduled_dart_mutator_isolate_ = nullptr;
   thread->set_execution_state(Thread::kThreadInNative);
   thread->stack_limit_.store(0);
@@ -702,6 +734,72 @@ void Thread::ClearStackLimit() {
   SetStackLimit(OSThread::kInvalidStackLimit);
 }
 
+void Thread::RestoreCoroutine(CoroutinePtr coroutine) {
+  MonitorLocker ml(&thread_lock_);
+  coroutine_ = coroutine;
+  if (!HasScheduledInterrupts()) {
+    stack_limit_.store(coroutine->untag()->overflow_stack_limit());
+  }
+  saved_stack_limit_ = coroutine->untag()->overflow_stack_limit();
+}
+
+CoroutinePtr Thread::SaveCoroutine() {
+  MonitorLocker ml(&thread_lock_);
+  if (!HasScheduledInterrupts()) {
+    stack_limit_.store(OSThread::kInvalidStackLimit);
+  }
+  saved_stack_limit_ = OSThread::kInvalidStackLimit;
+  CoroutinePtr coroutine = coroutine_;
+  coroutine_ = Coroutine::null();
+  return coroutine;
+}
+
+void Thread::EnterCoroutine(CoroutinePtr coroutine) {
+  coroutine_ = coroutine;
+  if (!HasScheduledInterrupts()) {
+    stack_limit_.store(coroutine->untag()->overflow_stack_limit());
+  }
+  saved_stack_limit_ = coroutine->untag()->overflow_stack_limit();
+}
+
+void Thread::ExitCoroutine() {
+  coroutine_ = Coroutine::null();
+  if (!HasScheduledInterrupts()) {
+    stack_limit_.store(os_thread()->overflow_stack_limit());
+  }
+  saved_stack_limit_ = os_thread()->overflow_stack_limit();
+}
+
+void Thread::EnableCoroutine() {
+  coroutine_ = disabled_coroutine_;
+  disabled_coroutine_ = Coroutine::null();
+  if (!HasScheduledInterrupts()) {
+    stack_limit_.store(coroutine_->untag()->overflow_stack_limit());
+  }
+  saved_stack_limit_ = coroutine_->untag()->overflow_stack_limit();
+}
+
+void Thread::DisableCoroutine() {
+  disabled_coroutine_ = coroutine_;
+  coroutine_ = Coroutine::null();
+  if (!HasScheduledInterrupts()) {
+    stack_limit_.store(os_thread()->overflow_stack_limit());
+  }
+  saved_stack_limit_ = os_thread()->overflow_stack_limit();
+}
+
+uword Thread::GetSavedStackLimit() const {
+  return !has_coroutine() ? saved_stack_limit_
+         : saved_stack_limit_ == OSThread::kInvalidStackLimit
+             ? OSThread::kInvalidStackLimit
+             : coroutine_->untag()->overflow_stack_limit();
+}
+
+bool Thread::HasStackHeadroom() const {
+  return has_coroutine() ? coroutine_->untag()->HasStackHeadroom()
+                         : os_thread()->HasStackHeadroom();
+}
+
 static bool IsInterruptLimit(uword limit) {
   return (limit & ~Thread::kInterruptsMask) ==
          (kInterruptStackLimit & ~Thread::kInterruptsMask);
@@ -724,7 +822,7 @@ void Thread::ScheduleInterrupts(uword interrupt_bits) {
 uword Thread::GetAndClearInterrupts() {
   uword interrupt_bits = 0;
   uword old_limit = stack_limit_.load();
-  uword new_limit = saved_stack_limit_;
+  uword new_limit = GetSavedStackLimit();
   do {
     if (IsInterruptLimit(old_limit)) {
       interrupt_bits = interrupt_bits | (old_limit & kInterruptsMask);
@@ -965,8 +1063,7 @@ void Thread::ClearReusableHandles() {
 #undef CLEAR_REUSABLE_HANDLE
 }
 
-void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
-                                 ValidationPolicy validation_policy) {
+void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor, ValidationPolicy validation_policy) {
   ASSERT(visitor != nullptr);
 
   if (zone() != nullptr) {
@@ -978,6 +1075,8 @@ void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
 
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&global_object_pool_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_exception_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&coroutine_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&disabled_coroutine_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_stacktrace_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&sticky_error_));
 
@@ -1011,6 +1110,84 @@ void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
     while (frame != nullptr) {
       frame->VisitObjectPointers(visitor);
       frame = frames_iterator.NextFrame();
+    }
+    visitor->clear_gc_root_type();
+  } else {
+    // We are not on the mutator thread.
+    RELEASE_ASSERT(top_exit_frame_info() == 0);
+  }
+}
+
+void Thread::VisitObjectPointersCoroutine(Isolate* isolate, ObjectPointerVisitor* visitor, ValidationPolicy validation_policy) {
+  ASSERT(visitor != nullptr);
+
+  if (zone() != nullptr) {
+    zone()->VisitObjectPointers(visitor);
+  }
+
+  // Visit objects in thread specific handles area.
+  reusable_handles_.VisitObjectPointers(visitor);
+
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&global_object_pool_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_exception_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&coroutine_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&disabled_coroutine_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&active_stacktrace_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&sticky_error_));
+
+  // Visit the api local scope as it has all the api local handles.
+  ApiLocalScope* scope = api_top_scope_;
+  while (scope != nullptr) {
+    scope->local_handles()->VisitObjectPointers(visitor);
+    scope = scope->previous();
+  }
+
+  // Only the mutator thread can run Dart code.
+  if (IsDartMutatorThread()) {
+    // The MarkTask, which calls this method, can run on a different thread.  We
+    // therefore assume the mutator is at a safepoint and we can iterate its
+    // stack.
+    // TODO(vm-team): It would be beneficial to be able to ask the mutator
+    // thread whether it is in fact blocked at the moment (at a "safepoint") so
+    // we can safely iterate its stack.
+    //
+    // Unfortunately we cannot use `this->IsAtSafepoint()` here because that
+    // will return `false` even though the mutator thread is waiting for mark
+    // tasks (which iterate its stack) to finish.
+    const StackFrameIterator::CrossThreadPolicy cross_thread_policy = StackFrameIterator::kAllowCrossThreadIteration;
+
+    // Iterate over all the stack frames and visit objects on the stack.
+    StackFrameIterator thread_frames_iterator(top_exit_frame_info(), validation_policy, this, cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
+    StackFrame* frame = thread_frames_iterator.NextFrame();
+    visitor->set_gc_root_type("frame");
+    while (frame != nullptr) {
+      OS::Print("Thread::VisitObjectPointersCoroutine: %s\n", frame->ToCString());
+      frame->VisitObjectPointers(visitor);
+      frame = thread_frames_iterator.NextFrame();
+      if (frame != nullptr && StubCode::InCoroutineForkStub(frame->GetCallerPc())) {
+        OS::Print("[last] Thread::VisitObjectPointersCoroutine: %s\n", frame->ToCString());
+        frame->VisitObjectPointers(visitor);
+        break;
+      }
+      if (frame != nullptr && StubCode::InCoroutineInitializeStub(frame->GetCallerPc())) {
+        const uword stub_fp = *reinterpret_cast<uword*>(coroutine_->untag()->native_stack_base());
+        StackFrameIterator native_coroutine_frames_iterator(stub_fp, validation_policy, this, cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
+        StackFrame* frame = native_coroutine_frames_iterator.NextFrame();
+        while (frame != nullptr) {
+          OS::Print("[native] Thread::VisitObjectPointersCoroutine: %s\n", frame->ToCString());
+          frame->VisitObjectPointers(visitor);
+          frame = native_coroutine_frames_iterator.NextFrame();
+        }
+        break;
+      }
+    }
+    auto coroutines = isolate->coroutines_registry().untag()->data();
+    auto coroutines_count = Smi::Value(isolate->coroutines_registry().untag()->length());
+    for (auto index = 0; index < coroutines_count; index++) {
+      auto item = Coroutine::RawCast(coroutines.untag()->element(index));
+      if ((item->untag()->attributes() & (Coroutine::CoroutineAttributes::suspended)) != 0) {
+        UntaggedCoroutine::VisitStack(item, visitor);
+      }
     }
     visitor->clear_gc_root_type();
   } else {
@@ -1107,6 +1284,7 @@ void Thread::RestoreWriteBarrierInvariant(RestoreWriteBarrierInvariantOp op) {
 
   const StackFrameIterator::CrossThreadPolicy cross_thread_policy =
       StackFrameIterator::kAllowCrossThreadIteration;
+
   StackFrameIterator frames_iterator(top_exit_frame_info(),
                                      ValidationPolicy::kDontValidateFrames,
                                      this, cross_thread_policy);
@@ -1141,12 +1319,120 @@ void Thread::RestoreWriteBarrierInvariant(RestoreWriteBarrierInvariantOp op) {
   }
 }
 
-void Thread::DeferredMarkLiveTemporaries() {
+static bool RestoreWriteBarrierInvariantForFrame(ObjectStore* object_store, StackFrame* frame, bool scan, ObjectPointerVisitor* visitor) {
+  if (frame->IsExitFrame()) {
+    scan = true;
+  } else if (frame->IsEntryFrame()) {
+  } else if (frame->IsStubFrame()) {
+    const uword pc = frame->pc();
+    if (Code::ContainsInstructionAt(
+            object_store->init_late_static_field_stub(), pc) ||
+        Code::ContainsInstructionAt(
+            object_store->init_late_final_static_field_stub(), pc) ||
+        Code::ContainsInstructionAt(
+            object_store->init_late_instance_field_stub(), pc) ||
+        Code::ContainsInstructionAt(
+            object_store->init_late_final_instance_field_stub(), pc)) {
+      scan = true;
+    }
+  } else {
+    ASSERT(frame->IsDartFrame(false));
+    if (scan) {
+      OS::Print("RestoreWriteBarrierInvariantForFrame: %s\n", frame->ToCString());
+      frame->VisitObjectPointers(visitor);
+    }
+    scan = false;
+  }
+  return scan;
+}
+
+void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWriteBarrierInvariantOp op) {
+  ASSERT(IsAtSafepoint() || OwnsGCSafepoint() || this == Thread::Current());
+
+  RestoreWriteBarrierInvariantVisitor visitor(isolate_group(), this, op);
+  ObjectStore* object_store = isolate_group()->object_store();
+
+  const StackFrameIterator::CrossThreadPolicy cross_thread_policy = StackFrameIterator::kAllowCrossThreadIteration;
+  
+  StackFrameIterator thread_frames_iterator(top_exit_frame_info(), ValidationPolicy::kDontValidateFrames, this, cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
+  bool scan_next_dart_frame = false;
+  for (StackFrame* frame = thread_frames_iterator.NextFrame(); frame != nullptr;) {
+    OS::Print("Thread::RestoreWriteBarrierInvariantCoroutine 1: %s\n", frame->ToCString());
+    scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+    frame = thread_frames_iterator.NextFrame();
+    if (frame != nullptr && StubCode::InCoroutineForkStub(frame->GetCallerPc())) {
+      OS::Print("[last] Thread::RestoreWriteBarrierInvariantCoroutine 1: %s\n", frame->ToCString());
+      scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+      break;
+    }
+    if (frame != nullptr && StubCode::InCoroutineInitializeStub(frame->GetCallerPc())) {
+      OS::Print("[last] Thread::RestoreWriteBarrierInvariantCoroutine 1: %s\n", frame->ToCString());
+      RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+      scan_next_dart_frame = false;
+      const uword stub_fp = *reinterpret_cast<uword*>(coroutine_->untag()->native_stack_base());
+      StackFrameIterator frames_iterator(stub_fp, ValidationPolicy::kDontValidateFrames, this, cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
+      StackFrame* frame = frames_iterator.NextFrame();
+      while (frame != nullptr) {
+        OS::Print("[native] Thread::RestoreWriteBarrierInvariantCoroutine 1: %s\n", frame->ToCString());
+        scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+        frame = frames_iterator.NextFrame();
+      }
+      break;
+    }
+  }
+
+  auto coroutines = isolate->coroutines_registry().untag()->data();
+  auto coroutines_count = Smi::Value(isolate->coroutines_registry().untag()->length());
+  for (auto index = 0; index < coroutines_count; index++) {
+    auto item = Coroutine::RawCast(coroutines.untag()->element(index));
+    if ((item.untag()->attributes() & Coroutine::CoroutineAttributes::suspended) != 0) {
+      auto stack_base = item.untag()->stack_base();
+      auto native_stack_base = item.untag()->native_stack_base();
+      const uword stub_fp = *reinterpret_cast<uword*>(stack_base);
+      StackFrameIterator coroutine_frames_iterator(stub_fp, ValidationPolicy::kDontValidateFrames, this, cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
+      bool scan_next_dart_frame = false;
+      for (StackFrame* frame = coroutine_frames_iterator.NextFrame(); frame != nullptr;) {
+        OS::Print("Thread::RestoreWriteBarrierInvariantCoroutine 2: %s\n", frame->ToCString());
+        scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+        frame = coroutine_frames_iterator.NextFrame();
+        if (frame != nullptr && StubCode::InCoroutineForkStub(frame->GetCallerPc())) {
+          OS::Print("[last] Thread::RestoreWriteBarrierInvariantCoroutine 2: %s\n", frame->ToCString());
+          scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+          break;
+        }
+        if (frame != nullptr && StubCode::InCoroutineInitializeStub(frame->GetCallerPc())) {
+          OS::Print("[last] Thread::RestoreWriteBarrierInvariantCoroutine 2: %s\n", frame->ToCString());
+          RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+          scan_next_dart_frame = false;
+          const uword stub_fp = *reinterpret_cast<uword*>(native_stack_base);
+          StackFrameIterator native_coroutine_frames_iterator(stub_fp, ValidationPolicy::kDontValidateFrames, this, cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
+          StackFrame* frame = native_coroutine_frames_iterator.NextFrame();
+          while (frame != nullptr) {
+            OS::Print("[native] Thread::RestoreWriteBarrierInvariantCoroutine 2: %s\n", frame->ToCString());
+            scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+            frame = native_coroutine_frames_iterator.NextFrame();
+          }
+          break;
+        }
+      }
+    }
+  }
+}
+
+void Thread::DeferredMarkLiveTemporaries(Isolate* isolate) {
+  if (has_coroutine()) {
+    RestoreWriteBarrierInvariantCoroutine(isolate, RestoreWriteBarrierInvariantOp::kAddToDeferredMarkingStack);
+    return;
+  }
   RestoreWriteBarrierInvariant(
       RestoreWriteBarrierInvariantOp::kAddToDeferredMarkingStack);
 }
 
-void Thread::RememberLiveTemporaries() {
+void Thread::RememberLiveTemporaries(Isolate* isolate) {
+  if (has_coroutine()) {
+    RestoreWriteBarrierInvariantCoroutine(isolate, RestoreWriteBarrierInvariantOp::kAddToRememberedSet);
+    return;
+  }
   RestoreWriteBarrierInvariant(
       RestoreWriteBarrierInvariantOp::kAddToRememberedSet);
 }
@@ -1156,9 +1442,9 @@ bool Thread::CanLoadFromThread(const Object& object) {
   // objects *before* stubs are initialized, we only loop ver the stubs if the
   // [object] is in fact a [Code] object.
   if (object.IsCode()) {
-#define CHECK_OBJECT(type_name, member_name, expr, default_init_value)         \
-  if (object.ptr() == expr) {                                                  \
-    return true;                                                               \
+#define CHECK_OBJECT(type_name, member_name, expr, default_init_value) \
+  if (object.ptr() == expr) {                                          \
+    return true;                                                       \
   }
     CACHED_VM_STUBS_LIST(CHECK_OBJECT)
 #undef CHECK_OBJECT
@@ -1166,9 +1452,9 @@ bool Thread::CanLoadFromThread(const Object& object) {
 
   // For non [Code] objects we check if the object equals to any of the cached
   // non-stub entries.
-#define CHECK_OBJECT(type_name, member_name, expr, default_init_value)         \
-  if (object.ptr() == expr) {                                                  \
-    return true;                                                               \
+#define CHECK_OBJECT(type_name, member_name, expr, default_init_value) \
+  if (object.ptr() == expr) {                                          \
+    return true;                                                       \
   }
   CACHED_NON_VM_STUB_LIST(CHECK_OBJECT)
 #undef CHECK_OBJECT
@@ -1180,10 +1466,10 @@ intptr_t Thread::OffsetFromThread(const Object& object) {
   // objects *before* stubs are initialized, we only loop ver the stubs if the
   // [object] is in fact a [Code] object.
   if (object.IsCode()) {
-#define COMPUTE_OFFSET(type_name, member_name, expr, default_init_value)       \
-  ASSERT((expr)->untag()->InVMIsolateHeap());                                  \
-  if (object.ptr() == expr) {                                                  \
-    return Thread::member_name##offset();                                      \
+#define COMPUTE_OFFSET(type_name, member_name, expr, default_init_value) \
+  ASSERT((expr)->untag()->InVMIsolateHeap());                            \
+  if (object.ptr() == expr) {                                            \
+    return Thread::member_name##offset();                                \
   }
     CACHED_VM_STUBS_LIST(COMPUTE_OFFSET)
 #undef COMPUTE_OFFSET
@@ -1191,9 +1477,9 @@ intptr_t Thread::OffsetFromThread(const Object& object) {
 
   // For non [Code] objects we check if the object equals to any of the cached
   // non-stub entries.
-#define COMPUTE_OFFSET(type_name, member_name, expr, default_init_value)       \
-  if (object.ptr() == expr) {                                                  \
-    return Thread::member_name##offset();                                      \
+#define COMPUTE_OFFSET(type_name, member_name, expr, default_init_value) \
+  if (object.ptr() == expr) {                                            \
+    return Thread::member_name##offset();                                \
   }
   CACHED_NON_VM_STUB_LIST(COMPUTE_OFFSET)
 #undef COMPUTE_OFFSET
@@ -1209,10 +1495,10 @@ bool Thread::ObjectAtOffset(intptr_t offset, Object* object) {
     return false;
   }
 
-#define COMPUTE_OFFSET(type_name, member_name, expr, default_init_value)       \
-  if (Thread::member_name##offset() == offset) {                               \
-    *object = expr;                                                            \
-    return true;                                                               \
+#define COMPUTE_OFFSET(type_name, member_name, expr, default_init_value) \
+  if (Thread::member_name##offset() == offset) {                         \
+    *object = expr;                                                      \
+    return true;                                                         \
   }
   CACHED_VM_OBJECTS_LIST(COMPUTE_OFFSET)
 #undef COMPUTE_OFFSET
@@ -1220,16 +1506,16 @@ bool Thread::ObjectAtOffset(intptr_t offset, Object* object) {
 }
 
 intptr_t Thread::OffsetFromThread(const RuntimeEntry* runtime_entry) {
-#define COMPUTE_OFFSET(name)                                                   \
-  if (runtime_entry == &k##name##RuntimeEntry) {                               \
-    return Thread::name##_entry_point_offset();                                \
+#define COMPUTE_OFFSET(name)                     \
+  if (runtime_entry == &k##name##RuntimeEntry) { \
+    return Thread::name##_entry_point_offset();  \
   }
   RUNTIME_ENTRY_LIST(COMPUTE_OFFSET)
 #undef COMPUTE_OFFSET
 
-#define COMPUTE_OFFSET(returntype, name, ...)                                  \
-  if (runtime_entry == &k##name##RuntimeEntry) {                               \
-    return Thread::name##_entry_point_offset();                                \
+#define COMPUTE_OFFSET(returntype, name, ...)    \
+  if (runtime_entry == &k##name##RuntimeEntry) { \
+    return Thread::name##_entry_point_offset();  \
   }
   LEAF_RUNTIME_ENTRY_LIST(COMPUTE_OFFSET)
 #undef COMPUTE_OFFSET
@@ -1453,9 +1739,9 @@ void Thread::SetupDartMutatorStateDependingOnSnapshot(IsolateGroup* group) {
     if (dispatch_table != nullptr) {
       dispatch_table_array_ = dispatch_table->ArrayOrigin();
     }
-#define INIT_ENTRY_POINT(name)                                                 \
-  if (object_store->name() != Object::null()) {                                \
-    name##_entry_point_ = Function::EntryPointOf(object_store->name());        \
+#define INIT_ENTRY_POINT(name)                                          \
+  if (object_store->name() != Object::null()) {                         \
+    name##_entry_point_ = Function::EntryPointOf(object_store->name()); \
   }
     CACHED_FUNCTION_ENTRY_POINTS_LIST(INIT_ENTRY_POINT)
 #undef INIT_ENTRY_POINT
@@ -1496,7 +1782,8 @@ DisableThreadInterruptsScope::~DisableThreadInterruptsScope() {
 }
 #endif
 
-NoReloadScope::NoReloadScope(Thread* thread) : ThreadStackResource(thread) {
+NoReloadScope::NoReloadScope(Thread* thread)
+    : ThreadStackResource(thread) {
 #if !defined(PRODUCT) && !defined(DART_PRECOMPILED_RUNTIME)
   thread->no_reload_scope_depth_++;
   ASSERT(thread->no_reload_scope_depth_ >= 0);

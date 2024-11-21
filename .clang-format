@@ -11,3 +11,5 @@ AllowShortIfStatementsOnASingleLine: 'true'
 
 # Put escaped newlines into the rightmost column.
 AlignEscapedNewlinesLeft: false
+
+ColumnLimit: 0

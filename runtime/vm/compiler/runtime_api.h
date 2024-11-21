@@ -1034,6 +1034,30 @@ class SuspendState : public AllStatic {
   FINAL_CLASS();
 };
 
+class Coroutine : public AllStatic {
+ public:
+  static word name_offset();
+  static word index_offset();
+  static word entry_offset();
+  static word trampoline_offset();
+  static word argument_offset();
+  static word attributes_offset();
+  static word caller_offset();
+  static word scheduler_offset();
+  static word processor_offset();
+  static word to_state_offset();
+  static word to_processor_next_offset();
+  static word to_processor_previous_offset();
+  static word stack_size_offset();
+  static word native_stack_base_offset();
+  static word stack_root_offset();
+  static word stack_base_offset();
+  static word stack_limit_offset();
+  static word overflow_stack_limit_offset();
+  static word InstanceSize();
+  FINAL_CLASS();
+};
+
 class Integer : public AllStatic {
  public:
   static word InstanceSize();
@@ -1255,6 +1279,9 @@ class Thread : public AllStatic {
   static word no_scope_native_wrapper_entry_point_offset();
   static word auto_scope_native_wrapper_entry_point_offset();
 
+  static word coroutine_offset();
+  static word disabled_coroutine_offset();
+
 #define THREAD_XMM_CONSTANT_LIST(V)                                            \
   V(float_not)                                                                 \
   V(float_negate)                                                              \
@@ -1333,6 +1360,7 @@ class Isolate : public AllStatic {
   static word current_tag_offset();
   static word user_tag_offset();
   static word finalizers_offset();
+  static word coroutines_registry_offset();
 #if !defined(PRODUCT)
   static word single_step_offset();
   static word has_resumption_breakpoints_offset();

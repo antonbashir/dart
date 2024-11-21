@@ -116,6 +116,16 @@ class StackFrame : public ValueObject {
 
   uword GetCallerSp() const { return fp() + (kCallerSpSlotFromFp * kWordSize); }
 
+  uword GetCallerPc() const {
+    uword raw_pc = *(reinterpret_cast<uword*>(
+        fp() + (kSavedCallerPcSlotFromFp * kWordSize)));
+    ASSERT(raw_pc != StubCode::DeoptimizeLazyFromThrow().EntryPoint());
+    if (raw_pc == StubCode::DeoptimizeLazyFromReturn().EntryPoint()) {
+      return thread_->pending_deopts().FindPendingDeopt(GetCallerFp());
+    }
+    return raw_pc;
+  }
+
  protected:
   explicit StackFrame(Thread* thread)
       : fp_(0), sp_(0), pc_(0), thread_(thread) {}
@@ -140,16 +150,6 @@ class StackFrame : public ValueObject {
                                       (kSavedCallerFpSlotFromFp * kWordSize)));
   }
 
-  uword GetCallerPc() const {
-    uword raw_pc = *(reinterpret_cast<uword*>(
-        fp() + (kSavedCallerPcSlotFromFp * kWordSize)));
-    ASSERT(raw_pc != StubCode::DeoptimizeLazyFromThrow().EntryPoint());
-    if (raw_pc == StubCode::DeoptimizeLazyFromReturn().EntryPoint()) {
-      return thread_->pending_deopts().FindPendingDeopt(GetCallerFp());
-    }
-    return raw_pc;
-  }
-
   uword fp_;
   uword sp_;
   uword pc_;
@@ -161,6 +161,7 @@ class StackFrame : public ValueObject {
   friend class StackFrameIterator;
   // UntaggedSuspendState::VisitSuspendStatePointers creates a temporary
   // StackFrame objects for the copied frames of the suspended functions.
+  friend class UntaggedCoroutine;
   friend class UntaggedSuspendState;
   friend class ProfilerDartStackWalker;
   DISALLOW_COPY_AND_ASSIGN(StackFrame);
@@ -222,6 +223,11 @@ class StackFrameIterator {
     kAllowCrossThreadIteration = 1,
   };
 
+  enum StackOwner {
+    kStackOwnerCoroutine = 0,
+    kStackOwnerThread = 1,
+  };
+
   // Iterators for iterating over all frames from the last ExitFrame to the
   // first EntryFrame.
   StackFrameIterator(ValidationPolicy validation_policy,
@@ -231,7 +237,11 @@ class StackFrameIterator {
                      ValidationPolicy validation_policy,
                      Thread* thread,
                      CrossThreadPolicy cross_thread_policy);
-
+  StackFrameIterator(uword last_fp,
+                     ValidationPolicy validation_policy,
+                     Thread* thread,
+                     CrossThreadPolicy cross_thread_policy,
+                     StackOwner owner);
   // Iterator for iterating over all frames from the current frame (given by its
   // fp, sp, and pc) to the first EntryFrame.
   StackFrameIterator(uword fp,
@@ -270,8 +280,13 @@ class StackFrameIterator {
     StackFrame* NextFrame(bool validate);
 
    private:
-    explicit FrameSetIterator(Thread* thread)
-        : fp_(0), sp_(0), pc_(0), stack_frame_(thread), thread_(thread) {}
+    explicit FrameSetIterator(Thread* thread, StackOwner stack_owner)
+        : fp_(0),
+          sp_(0),
+          pc_(0),
+          stack_frame_(thread),
+          thread_(thread),
+          stack_owner_(stack_owner) {}
     void Unpoison();
 
     uword fp_;
@@ -279,6 +294,7 @@ class StackFrameIterator {
     uword pc_;
     StackFrame stack_frame_;  // Singleton frame returned by NextFrame().
     Thread* thread_;
+    StackOwner stack_owner_;
 
     friend class StackFrameIterator;
     DISALLOW_COPY_AND_ASSIGN(FrameSetIterator);
@@ -298,6 +314,8 @@ class StackFrameIterator {
   // stack frames.
   void SetupLastExitFrameData();
   void SetupNextExitFrameData();
+
+  bool HasCoroutine();
 
   bool validate_;     // Validate each frame as we traverse the frames.
   EntryFrame entry_;  // Singleton entry frame returned by NextEntryFrame().

@@ -55,6 +55,7 @@ class ObjectPointerVisitor;
   V(DartCollection, "dart:collection")                                         \
   V(DartCore, "dart:core")                                                     \
   V(DartDeveloper, "dart:developer")                                           \
+  V(DartFiber, "dart:fiber")                                                   \
   V(DartDeveloperTimeline, "dart.developer.timeline")                          \
   V(DartFfi, "dart:ffi")                                                       \
   V(DartInternal, "dart:_internal")                                            \
@@ -381,6 +382,7 @@ class ObjectPointerVisitor;
   V(_StreamIterator, "_StreamIterator")                                        \
   V(_String, "String")                                                         \
   V(_SuspendState, "_SuspendState")                                            \
+  V(_Coroutine, "_Coroutine")                                                  \
   V(_SyncStarIterator, "_SyncStarIterator")                                    \
   V(_SyncStreamController, "_SyncStreamController")                            \
   V(_TransferableTypedDataImpl, "_TransferableTypedDataImpl")                  \

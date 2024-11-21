@@ -112,3 +112,9 @@ logs/logs.json
 logs/results.json
 .dart_tool/bisect_dart/
 doc/api/
+
+build/
+*.exe
+*.aot
+*.S
+*.s

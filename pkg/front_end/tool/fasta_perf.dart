@@ -124,6 +124,7 @@ Map<Uri, Uint8List> scanReachableFiles(Uri entryUri) {
     Uri.parse('dart:async'),
     Uri.parse('dart:collection'),
     Uri.parse('dart:convert'),
+    Uri.parse('dart:fiber'),
     Uri.parse('dart:core'),
     Uri.parse('dart:developer'),
     Uri.parse('dart:_internal'),

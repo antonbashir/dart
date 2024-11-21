@@ -3106,8 +3106,25 @@ void StubCodeCompiler::GenerateJumpToFrameStub() {
                                  /*ignore_unwind_in_progress=*/true);
   __ Bind(&exit_through_non_ffi);
 
+
   // Set the tag.
   __ movq(Assembler::VMTagAddress(), Immediate(VMTag::kDartTagId));
+
+  Label no_coroutine;
+  __ Load(TMP,
+          compiler::Address(THR, compiler::target::Thread::coroutine_offset()));
+  __ CompareObject(TMP, NullObject());
+  __ BranchIf(EQUAL, &no_coroutine);
+  __ MoveRegister(TMP, RSP);
+  __ SmiTag(TMP);
+  __ PushRegister(CallingConventions::kArg1Reg);
+  __ PushObject(NullObject());
+  __ PushRegister(TMP);
+  __ CallRuntime(kJumpToFrameCoroutineRuntimeEntry, 1);
+  __ Drop(2);
+  __ PopRegister(CallingConventions::kArg1Reg);
+  __ Bind(&no_coroutine);
+
   // Clear top exit frame.
   __ movq(Address(THR, target::Thread::top_exit_frame_info_offset()),
           Immediate(0));
