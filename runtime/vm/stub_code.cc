@@ -142,13 +142,25 @@ bool StubCode::InJumpToFrameStub(uword pc) {
   return (pc >= entry) && (pc < (entry + size));
 }
 
-bool StubCode::InCoroutineStub(uword pc) {
+bool StubCode::InCoroutineInitializeStub(uword pc) {
   ASSERT(HasBeenInitialized());
   uword entry = StubCode::CoroutineInitialize().EntryPoint();
   uword size = StubCode::CoroutineInitializeSize();
-  if ((pc >= entry) && (pc < (entry + size))) return true;
-  entry = StubCode::CoroutineFork().EntryPoint();
-  size = StubCode::CoroutineForkSize();
+  return ((pc >= entry) && (pc < (entry + size)));
+  
+}
+
+bool StubCode::InCoroutineForkStub(uword pc) {
+  ASSERT(HasBeenInitialized());
+  uword entry = StubCode::CoroutineFork().EntryPoint();
+  uword size = StubCode::CoroutineForkSize();
+  return ((pc >= entry) && (pc < (entry + size)));
+}
+
+bool StubCode::InCoroutineTransferStub(uword pc) {
+  ASSERT(HasBeenInitialized());
+  uword entry = StubCode::CoroutineTransfer().EntryPoint();
+  uword size = StubCode::CoroutineTransferSize();
   return ((pc >= entry) && (pc < (entry + size)));
 }
 

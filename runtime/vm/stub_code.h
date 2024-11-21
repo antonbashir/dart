@@ -52,7 +52,9 @@ class StubCode : public AllStatic {
   // Check if the specified pc is in the jump to frame stub.
   static bool InJumpToFrameStub(uword pc);
   
-  static bool InCoroutineStub(uword pc);
+  static bool InCoroutineInitializeStub(uword pc);
+  static bool InCoroutineForkStub(uword pc);
+  static bool InCoroutineTransferStub(uword pc);
 
   // Returns nullptr if no stub found.
   static const char* NameOfStub(uword entry_point);

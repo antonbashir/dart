@@ -167,15 +167,15 @@ bool StackFrame::IsStubFrame() const {
 }
 
 const char* StackFrame::ToCString() const {
-  ASSERT(thread_ == Thread::Current());
+  //  ASSERT(thread_ == Thread::Current());
   Zone* zone = Thread::Current()->zone();
-  const Code& code = Code::Handle(zone, GetCodeObject());
-  const char* name =
-      code.IsNull()
-          ? "Cannot find code object"
-          : code.QualifiedName(NameFormattingParams(Object::kInternalName));
-  return zone->PrintToString("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp " %s",
-                             pc(), fp(), sp(), name);
+  // const Code& code = Code::Handle(zone, GetCodeObject());
+  // const char* name =
+  //     code.IsNull()
+  //         ? "Cannot find code object"
+  //         : code.QualifiedName(NameFormattingParams(Object::kInternalName));
+  return zone->PrintToString("  pc 0x%" Pp " fp 0x%" Pp " sp 0x%" Pp "",
+                             pc(), fp(), sp());
 }
 
 void ExitFrame::VisitObjectPointers(ObjectPointerVisitor* visitor) {
@@ -521,11 +521,11 @@ StackFrameIterator::StackFrameIterator(uword last_fp,
                                        ValidationPolicy validation_policy,
                                        Thread* thread,
                                        CrossThreadPolicy cross_thread_policy,
-                                       StackOwner stack_owner)
+                                       StackOwner owner)
     : validate_(validation_policy == ValidationPolicy::kValidateFrames),
       entry_(thread),
       exit_(thread),
-      frames_(thread, stack_owner),
+      frames_(thread, owner),
       current_frame_(nullptr),
       thread_(thread) {
   ASSERT(cross_thread_policy == kAllowCrossThreadIteration ||
@@ -655,16 +655,6 @@ StackFrame* StackFrameIterator::FrameSetIterator::NextFrame(bool validate) {
   StackFrame* frame;
   ASSERT(HasNext());
   frame = &stack_frame_;
-  if (stack_owner_ == kStackOwnerCoroutine && StubCode::InCoroutineStub(frame->pc())) {
-    frame->sp_ = sp_;
-    frame->fp_ = fp_;
-    frame->pc_ = pc_;
-    sp_ = frame->GetCallerSp();
-    fp_ = frame->GetCallerFp();
-    pc_ = frame->GetCallerPc();
-    Unpoison();
-    return NextFrame(validate);
-  }
   frame->sp_ = sp_;
   frame->fp_ = fp_;
   frame->pc_ = pc_;

@@ -13,6 +13,7 @@
 #include "platform/text_buffer.h"
 #include "vm/canonical_tables.h"
 #include "vm/class_finalizer.h"
+#include "vm/class_table.h"
 #include "vm/code_observers.h"
 #include "vm/compiler/jit/compiler.h"
 #include "vm/compiler/runtime_api.h"
@@ -1776,8 +1777,8 @@ Isolate::Isolate(IsolateGroup* isolate_group,
   // how the vm_tag (kEmbedderTagId) can be set, these tags need to
   // move to the OSThread structure.
   set_user_tag(UserTags::kDefaultUserTag);
-  active_coroutines_.Initialize();
-  finished_coroutines_.Initialize();
+  active_coroutines()->Initialize();
+  finished_coroutines()->Initialize();
 }
 
 #undef REUSABLE_HANDLE_SCOPE_INIT
@@ -2742,8 +2743,8 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&tag_table_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&sticky_error_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&finalizers_));
-  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&saved_coroutine_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&coroutines_registry_));
+  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&saved_coroutine_));
 #if !defined(PRODUCT)
   visitor->VisitPointer(
       reinterpret_cast<ObjectPtr*>(&pending_service_extension_calls_));
@@ -2775,23 +2776,25 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
     visitor->VisitPointers(&pointers_to_verify_at_exit_[0],
                            pointers_to_verify_at_exit_.length());
   }
-
-  if (active_coroutines_.IsNotEmpty()) {
-    CoroutineLink::ForEach(&active_coroutines_, [&](CoroutinePtr coroutine) {
-      visitor->VisitPointer(&coroutine);
-    });
-  }
-
-  if (finished_coroutines_.IsNotEmpty()) {
-    CoroutineLink::ForEach(&finished_coroutines_, [&](CoroutinePtr coroutine) {
-      visitor->VisitPointer(&coroutine);
-    });
-  }
 }
 
 void Isolate::VisitStackPointers(ObjectPointerVisitor* visitor,
                                  ValidationPolicy validate_frames) {
   if (mutator_thread_ != nullptr) {
+    if (mutator_thread_->has_coroutine()) {
+      mutator_thread_->VisitObjectPointersCoroutine(this, visitor, validate_frames);
+      // if (coroutines_ != nullptr) {
+      //   for (uword index = 0; index < coroutines_count_; index++) {
+      //       auto item = coroutines_[index];
+      //       UntaggedCoroutine::VisitStack(*item, visitor);
+      //       delete coroutines_[index];
+      //   }
+      //   delete[] coroutines_;
+      //   coroutines_ = nullptr;
+      //   coroutines_count_ = 0;
+      // }
+      return;
+    }
     mutator_thread_->VisitObjectPointers(visitor, validate_frames);
   }
 }
@@ -2806,13 +2809,13 @@ void IsolateGroup::FlushMarkingStacks() {
 
 void Isolate::RememberLiveTemporaries() {
   if (mutator_thread_ != nullptr) {
-    mutator_thread_->RememberLiveTemporaries();
+    mutator_thread_->RememberLiveTemporaries(this);
   }
 }
 
 void Isolate::DeferredMarkLiveTemporaries() {
   if (mutator_thread_ != nullptr) {
-    mutator_thread_->DeferredMarkLiveTemporaries();
+    mutator_thread_->DeferredMarkLiveTemporaries(this);
   }
 }
 
@@ -2936,6 +2939,21 @@ void IsolateGroup::VisitObjectPointers(ObjectPointerVisitor* visitor,
                                        ValidationPolicy validate_frames) {
   VisitSharedPointers(visitor);
   for (Isolate* isolate : isolates_) {
+    if (isolate->coroutines_registry() != Object::null()) {
+      auto count = Smi::Value(isolate->coroutines_registry().untag()->length());
+      isolate->coroutines_count_ = count;
+      isolate->coroutines_ = new CoroutineState*[count];
+      auto elements = isolate->coroutines_registry().untag()->data().untag();
+      for (auto index = 0; index < count; index ++) {
+        isolate->coroutines_[index] = new CoroutineState();
+        auto item = elements->element(index);
+        if (item.IsHeapObject() && item.IsWellFormed() && item.IsCoroutine()) {
+          isolate->coroutines_[index]->nsp = Coroutine::RawCast(item).untag()->native_stack_base();
+          isolate->coroutines_[index]->sp = Coroutine::RawCast(item).untag()->stack_base();
+          isolate->coroutines_[index]->attributes = Coroutine::RawCast(item).untag()->attributes();
+        }
+      }
+    }
     isolate->VisitObjectPointers(visitor, validate_frames);
   }
   VisitStackPointers(visitor, validate_frames);
@@ -3005,6 +3023,8 @@ void IsolateGroup::VisitStackPointers(ObjectPointerVisitor* visitor,
   }
 
   visitor->clear_gc_root_type();
+
+  // visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&disabled_coroutine_));
 }
 
 void IsolateGroup::VisitObjectIdRingPointers(ObjectPointerVisitor* visitor) {

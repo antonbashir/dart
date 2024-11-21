@@ -21,76 +21,76 @@
 // The list here contains two kinds of classes of objects
 //   * objects that will be shared and we will therefore never need to copy
 //   * objects that user object graphs should never reference
-#define FOR_UNSUPPORTED_CLASSES(V)                                             \
-  V(AbstractType)                                                              \
-  V(ApiError)                                                                  \
-  V(Bool)                                                                      \
-  V(CallSiteData)                                                              \
-  V(Capability)                                                                \
-  V(Class)                                                                     \
-  V(ClosureData)                                                               \
-  V(Code)                                                                      \
-  V(CodeSourceMap)                                                             \
-  V(CompressedStackMaps)                                                       \
-  V(ContextScope)                                                              \
-  V(DynamicLibrary)                                                            \
-  V(Error)                                                                     \
-  V(ExceptionHandlers)                                                         \
-  V(FfiTrampolineData)                                                         \
-  V(Field)                                                                     \
-  V(Finalizer)                                                                 \
-  V(FinalizerBase)                                                             \
-  V(FinalizerEntry)                                                            \
-  V(NativeFinalizer)                                                           \
-  V(Function)                                                                  \
-  V(FunctionType)                                                              \
-  V(FutureOr)                                                                  \
-  V(ICData)                                                                    \
-  V(Instance)                                                                  \
-  V(Instructions)                                                              \
-  V(InstructionsSection)                                                       \
-  V(InstructionsTable)                                                         \
-  V(Int32x4)                                                                   \
-  V(Integer)                                                                   \
-  V(KernelProgramInfo)                                                         \
-  V(LanguageError)                                                             \
-  V(Library)                                                                   \
-  V(LibraryPrefix)                                                             \
-  V(LoadingUnit)                                                               \
-  V(LocalVarDescriptors)                                                       \
-  V(MegamorphicCache)                                                          \
-  V(Mint)                                                                      \
-  V(MirrorReference)                                                           \
-  V(MonomorphicSmiableCall)                                                    \
-  V(Namespace)                                                                 \
-  V(Number)                                                                    \
-  V(ObjectPool)                                                                \
-  V(PatchClass)                                                                \
-  V(PcDescriptors)                                                             \
-  V(Pointer)                                                                   \
-  V(ReceivePort)                                                               \
-  V(RecordType)                                                                \
-  V(RegExp)                                                                    \
-  V(Script)                                                                    \
-  V(Sentinel)                                                                  \
-  V(SendPort)                                                                  \
-  V(SingleTargetCache)                                                         \
-  V(Smi)                                                                       \
-  V(StackTrace)                                                                \
-  V(SubtypeTestCache)                                                          \
-  V(SuspendState)                                                              \
-  V(Type)                                                                      \
-  V(TypeArguments)                                                             \
-  V(TypeParameter)                                                             \
-  V(TypeParameters)                                                            \
-  V(TypedDataBase)                                                             \
-  V(UnhandledException)                                                        \
-  V(UnlinkedCall)                                                              \
-  V(UnwindError)                                                               \
-  V(UserTag)                                                                   \
-  V(WeakArray)                                                                 \
-  V(WeakSerializationReference)                                                \
-  V(Coroutine)
+#define FOR_UNSUPPORTED_CLASSES(V) \
+  V(AbstractType)                  \
+  V(ApiError)                      \
+  V(Bool)                          \
+  V(CallSiteData)                  \
+  V(Capability)                    \
+  V(Class)                         \
+  V(ClosureData)                   \
+  V(Code)                          \
+  V(CodeSourceMap)                 \
+  V(CompressedStackMaps)           \
+  V(ContextScope)                  \
+  V(DynamicLibrary)                \
+  V(Error)                         \
+  V(ExceptionHandlers)             \
+  V(FfiTrampolineData)             \
+  V(Field)                         \
+  V(Finalizer)                     \
+  V(FinalizerBase)                 \
+  V(FinalizerEntry)                \
+  V(NativeFinalizer)               \
+  V(Function)                      \
+  V(FunctionType)                  \
+  V(FutureOr)                      \
+  V(ICData)                        \
+  V(Instance)                      \
+  V(Instructions)                  \
+  V(InstructionsSection)           \
+  V(InstructionsTable)             \
+  V(Int32x4)                       \
+  V(Integer)                       \
+  V(KernelProgramInfo)             \
+  V(LanguageError)                 \
+  V(Library)                       \
+  V(LibraryPrefix)                 \
+  V(LoadingUnit)                   \
+  V(LocalVarDescriptors)           \
+  V(MegamorphicCache)              \
+  V(Mint)                          \
+  V(MirrorReference)               \
+  V(MonomorphicSmiableCall)        \
+  V(Namespace)                     \
+  V(Number)                        \
+  V(ObjectPool)                    \
+  V(PatchClass)                    \
+  V(PcDescriptors)                 \
+  V(Pointer)                       \
+  V(ReceivePort)                   \
+  V(RecordType)                    \
+  V(RegExp)                        \
+  V(Script)                        \
+  V(Sentinel)                      \
+  V(SendPort)                      \
+  V(SingleTargetCache)             \
+  V(Smi)                           \
+  V(StackTrace)                    \
+  V(SubtypeTestCache)              \
+  V(SuspendState)                  \
+  V(Type)                          \
+  V(TypeArguments)                 \
+  V(TypeParameter)                 \
+  V(TypeParameters)                \
+  V(TypedDataBase)                 \
+  V(UnhandledException)            \
+  V(UnlinkedCall)                  \
+  V(UnwindError)                   \
+  V(UserTag)                       \
+  V(WeakArray)                     \
+  V(WeakSerializationReference)    \
+  V(Coroutine)                     \
 
 namespace dart {
 
@@ -115,10 +115,10 @@ struct PtrTypes {
     return dart::Object::Handle(arg);
   }
 
-#define DO(V)                                                                  \
-  using V = V##Ptr;                                                            \
-  static Untagged##V* Untag##V(V##Ptr arg) { return arg.untag(); }             \
-  static V##Ptr Get##V##Ptr(V##Ptr arg) { return arg; }                        \
+#define DO(V)                                                      \
+  using V = V##Ptr;                                                \
+  static Untagged##V* Untag##V(V##Ptr arg) { return arg.untag(); } \
+  static V##Ptr Get##V##Ptr(V##Ptr arg) { return arg; }            \
   static V##Ptr Cast##V(ObjectPtr arg) { return dart::V::RawCast(arg); }
   CLASS_LIST_FOR_HANDLES(DO)
 #undef DO
@@ -132,10 +132,10 @@ struct HandleTypes {
   static dart::ObjectPtr GetObjectPtr(Object arg) { return arg.ptr(); }
   static Object HandlifyObject(Object arg) { return arg; }
 
-#define DO(V)                                                                  \
-  using V = const dart::V&;                                                    \
-  static Untagged##V* Untag##V(V arg) { return arg.ptr().untag(); }            \
-  static V##Ptr Get##V##Ptr(V arg) { return arg.ptr(); }                       \
+#define DO(V)                                                       \
+  using V = const dart::V&;                                         \
+  static Untagged##V* Untag##V(V arg) { return arg.ptr().untag(); } \
+  static V##Ptr Get##V##Ptr(V arg) { return arg.ptr(); }            \
   static V Cast##V(const dart::Object& arg) { return dart::V::Cast(arg); }
   CLASS_LIST_FOR_HANDLES(DO)
 #undef DO
@@ -369,7 +369,8 @@ void FreeTransferablePeer(void* isolate_callback_data, void* peer) {
 
 class SlowFromTo {
  public:
-  explicit SlowFromTo(const GrowableObjectArray& storage) : storage_(storage) {}
+  explicit SlowFromTo(const GrowableObjectArray& storage)
+      : storage_(storage) {}
 
   ObjectPtr At(intptr_t index) { return storage_.At(index); }
   void Add(const Object& key, const Object& value) {
@@ -384,7 +385,8 @@ class SlowFromTo {
 
 class FastFromTo {
  public:
-  explicit FastFromTo(GrowableArray<ObjectPtr>& storage) : storage_(storage) {}
+  explicit FastFromTo(GrowableArray<ObjectPtr>& storage)
+      : storage_(storage) {}
 
   ObjectPtr At(intptr_t index) { return storage_.At(index); }
   void Add(ObjectPtr key, ObjectPtr value) {
@@ -409,7 +411,8 @@ static ObjectPtr Ptr(const Object& obj) {
 #if defined(HASH_IN_OBJECT_HEADER)
 class IdentityMap {
  public:
-  explicit IdentityMap(Thread* thread) : thread_(thread) {
+  explicit IdentityMap(Thread* thread)
+      : thread_(thread) {
     hash_table_used_ = 0;
     hash_table_capacity_ = 32;
     hash_table_ = reinterpret_cast<uint32_t*>(
@@ -528,7 +531,8 @@ class IdentityMap {
 #else   // defined(HASH_IN_OBJECT_HEADER)
 class IdentityMap {
  public:
-  explicit IdentityMap(Thread* thread) : isolate_(thread->isolate()) {
+  explicit IdentityMap(Thread* thread)
+      : isolate_(thread->isolate()) {
     isolate_->set_forward_table_new(new WeakTable());
     isolate_->set_forward_table_old(new WeakTable());
   }
@@ -855,13 +859,13 @@ class ObjectCopyBase {
     if (cid > kNumPredefinedCids) {
       return true;
     }
-#define HANDLE_ILLEGAL_CASE(Type)                                              \
-  case k##Type##Cid: {                                                         \
-    exception_msg_ =                                                           \
-        "Illegal argument in isolate message: "                                \
-        "(object is a " #Type ")";                                             \
-    exception_unexpected_object_ = object;                                     \
-    return false;                                                              \
+#define HANDLE_ILLEGAL_CASE(Type)               \
+  case k##Type##Cid: {                          \
+    exception_msg_ =                            \
+        "Illegal argument in isolate message: " \
+        "(object is a " #Type ")";              \
+    exception_unexpected_object_ = object;      \
+    return false;                               \
   }
 
     switch (cid) {
@@ -1697,7 +1701,8 @@ class ObjectCopy : public Base {
  public:
   using Types = typename Base::Types;
 
-  ObjectCopy(Thread* thread, IdentityMap* map) : Base(thread, map) {}
+  ObjectCopy(Thread* thread, IdentityMap* map)
+      : Base(thread, map) {}
 
   void CopyPredefinedInstance(typename Types::Object from,
                               typename Types::Object to,
@@ -1707,12 +1712,12 @@ class ObjectCopy : public Base {
       return;
     }
     switch (cid) {
-#define COPY_TO(clazz)                                                         \
-  case clazz::kClassId: {                                                      \
-    typename Types::clazz casted_from = Types::Cast##clazz(from);              \
-    typename Types::clazz casted_to = Types::Cast##clazz(to);                  \
-    Copy##clazz(casted_from, casted_to);                                       \
-    return;                                                                    \
+#define COPY_TO(clazz)                                            \
+  case clazz::kClassId: {                                         \
+    typename Types::clazz casted_from = Types::Cast##clazz(from); \
+    typename Types::clazz casted_to = Types::Cast##clazz(to);     \
+    Copy##clazz(casted_from, casted_to);                          \
+    return;                                                       \
   }
 
       CLASS_LIST_NO_OBJECT_NOR_STRING_NOR_ARRAY_NOR_MAP(COPY_TO)
@@ -1741,8 +1746,8 @@ class ObjectCopy : public Base {
 
       case kByteDataViewCid:
       case kUnmodifiableByteDataViewCid:
-#define COPY_TO(clazz)                                                         \
-  case kTypedData##clazz##ViewCid:                                             \
+#define COPY_TO(clazz)             \
+  case kTypedData##clazz##ViewCid: \
   case kUnmodifiableTypedData##clazz##ViewCid:
         CLASS_LIST_TYPED_DATA(COPY_TO) {
           typename Types::TypedDataView casted_from =
@@ -2113,10 +2118,10 @@ class ObjectCopy : public Base {
     return Types::GetObjectPtr(obj).Decompress(Base::heap_base_).untag();
   }
 
-#define DO(V)                                                                  \
-  DART_FORCE_INLINE                                                            \
-  Untagged##V* Untag##V(typename Types::V obj) {                               \
-    return Types::Get##V##Ptr(obj).Decompress(Base::heap_base_).untag();       \
+#define DO(V)                                                            \
+  DART_FORCE_INLINE                                                      \
+  Untagged##V* Untag##V(typename Types::V obj) {                         \
+    return Types::Get##V##Ptr(obj).Decompress(Base::heap_base_).untag(); \
   }
   CLASS_LIST_FOR_HANDLES(DO)
 #undef DO
@@ -2124,7 +2129,8 @@ class ObjectCopy : public Base {
 
 class FastObjectCopy : public ObjectCopy<FastObjectCopyBase> {
  public:
-  FastObjectCopy(Thread* thread, IdentityMap* map) : ObjectCopy(thread, map) {}
+  FastObjectCopy(Thread* thread, IdentityMap* map)
+      : ObjectCopy(thread, map) {}
   ~FastObjectCopy() {}
 
   ObjectPtr TryCopyGraphFast(ObjectPtr root) {

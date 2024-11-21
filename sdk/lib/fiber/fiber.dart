@@ -83,7 +83,7 @@ extension type FiberArgument(Object? _argument) {
   Map? get asMap => _argument == null ? {} : _argument as Map;
 }
 
-extension type FiberRegistry(List<_Coroutine> _registry) {
+extension type FiberRegistry(List<Fiber> _registry) implements Iterable<Fiber> {
   @pragma("vm:prefer-inline")
   int get length => _registry.length;
 }
@@ -164,7 +164,7 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   }
 
   @pragma("vm:prefer-inline")
-  static FiberRegistry get registry => FiberRegistry(_Coroutine._registry);
+  static FiberRegistry get registry => FiberRegistry(_Coroutine._registry as List<Fiber>);
 
   @pragma("vm:prefer-inline")
   static void schedule(Fiber fiber) {
@@ -175,12 +175,6 @@ extension type Fiber(_Coroutine _coroutine) implements _Coroutine {
   @pragma("vm:prefer-inline")
   static void reschedule() {
     Fiber.schedule(Fiber.current);
-    Fiber.suspend();
-  }
-
-  @pragma("vm:prefer-inline")
-  static void terminate() {
-    Fiber.current._processor._stop();
     Fiber.suspend();
   }
 

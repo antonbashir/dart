@@ -1,3 +1,5 @@
+// VMOptions=--coroutines_registry_shrink_capacity=64
+
 import 'dart:fiber';
 import 'dart:async';
 import 'package:expect/expect.dart';
@@ -16,7 +18,7 @@ final suites = {
   "flow": flow.tests,
   "exceptions": exceptions.tests,
 };
-
+ 
 void main(List<String> arguments) {
   if (arguments.isEmpty) {
     for (var suite in suites.entries) {
@@ -36,7 +38,7 @@ void main(List<String> arguments) {
   print("Processing suite: ${arguments[0]}");
   for (var test in suite!) {
     final function = RegExp(r"Function 'test(.+)'").firstMatch(test.toString())!.group(1);
-    if (arguments.length == 2 || function == arguments[1].toLowerCase()) {
+    if (arguments.length == 1 || function!.toLowerCase() == arguments[1].toLowerCase()) {
       print("Processing test: test${function}");
       test();
       print("Test: test${function} finished");

@@ -26661,45 +26661,45 @@ CodePtr SuspendState::GetCodeObject() const {
 
 CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto isolate = Isolate::Current();
-  auto finished = isolate->finished_coroutines();
+//  auto finished = isolate->finished_coroutines();
   auto active = isolate->active_coroutines();
   auto& registry = GrowableObjectArray::Handle(isolate->coroutines_registry());
 
   auto page_size = VirtualMemory::PageSize();
   auto stack_size = (size + page_size - 1) & ~(page_size - 1);
 
-  if (finished->IsNotEmpty()) {
-    auto& coroutine = Coroutine::Handle(finished->First()->Value());
-    coroutine.change_state(CoroutineAttributes::finished, CoroutineAttributes::created);
-    CoroutineLink::StealHead(active, coroutine.to_state());
-    coroutine.untag()->set_trampoline(trampoline);
-    if (UNLIKELY(stack_size != coroutine.stack_size())) {
-#if defined(DART_TARGET_OS_WINDOWS)
-      VirtualFree((void*)stack_limit(), 0, MEM_RELEASE);
-#else
-      munmap((void*)coroutine.untag()->stack_limit(), coroutine.untag()->stack_size());
-#endif
-#if defined(DART_TARGET_OS_WINDOWS)
-      void* stack_base = (void*)((uintptr_t)VirtualAlloc(
-          nullptr, stack_size, MEM_RESERVE | MEM_COMMIT,
-          PAGE_READWRITE));
-#else
-      void* stack_end = (void*)((uintptr_t)mmap(
-          nullptr, stack_size, PROT_READ | PROT_WRITE | PROT_EXEC,
-          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
-#endif
-      auto stack_limit = (uword)stack_end;
-      auto stack_base = (uword)(stack_size + (char*)stack_end);
-      coroutine.untag()->stack_size_ = stack_size;
-      coroutine.untag()->stack_root_ = stack_base;
-      coroutine.untag()->stack_base_ = stack_base;
-      coroutine.untag()->stack_limit_ = stack_limit;
-      coroutine.untag()->overflow_stack_limit_ = stack_limit + CalculateHeadroom(stack_base - stack_limit);
-    }
-    return coroutine.ptr();
-  }
+//   if (finished->IsNotEmpty()) {
+//     auto& coroutine = Coroutine::Handle(finished->Next()->Value());
+//     coroutine.change_state(CoroutineAttributes::finished, CoroutineAttributes::created);
+//     CoroutineLink::StealHead(active, coroutine.to_state());
+//     coroutine.untag()->set_trampoline(trampoline);
+//     if (UNLIKELY(stack_size != coroutine.stack_size())) {
+// #if defined(DART_TARGET_OS_WINDOWS)
+//       VirtualFree((void*)stack_limit(), 0, MEM_RELEASE);
+// #else
+//       munmap((void*)coroutine.untag()->stack_limit(), coroutine.untag()->stack_size());
+// #endif
+// #if defined(DART_TARGET_OS_WINDOWS)
+//       void* stack_base = (void*)((uintptr_t)VirtualAlloc(
+//           nullptr, stack_size, MEM_RESERVE | MEM_COMMIT,
+//           PAGE_READWRITE));
+// #else
+//       void* stack_end = (void*)((uintptr_t)mmap(
+//           nullptr, stack_size, PROT_READ | PROT_WRITE | PROT_EXEC,
+//           MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+// #endif
+//       auto stack_limit = (uword)stack_end;
+//       auto stack_base = (uword)(stack_size + (char*)stack_end);
+//       coroutine.untag()->stack_size_ = stack_size;
+//       coroutine.untag()->stack_root_ = stack_base;
+//       coroutine.untag()->stack_base_ = stack_base;
+//       coroutine.untag()->stack_limit_ = stack_limit;
+//       coroutine.untag()->overflow_stack_limit_ = stack_limit + CalculateHeadroom(stack_base - stack_limit);
+//     }
+//     return coroutine.ptr();
+//   }
 
-  const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kNew));
+  const auto& coroutine = Coroutine::Handle(Object::Allocate<Coroutine>(Heap::kOld));
 #if defined(DART_TARGET_OS_WINDOWS)
   void* stack_base = (void*)((uintptr_t)VirtualAlloc(
       nullptr, stack_size, MEM_RESERVE | MEM_COMMIT,
@@ -26712,14 +26712,14 @@ CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
   auto stack_limit = (uword)(stack_end);
   auto stack_base = (uword)(stack_size + (char*)stack_end);
 
-  coroutine.untag()->to_state_.Initialize();
-  coroutine.untag()->to_state_.SetValue(coroutine.ptr());
   coroutine.untag()->stack_size_ = stack_size;
   coroutine.untag()->native_stack_base_ = (uword) nullptr;
   coroutine.untag()->stack_root_ = stack_base;
   coroutine.untag()->stack_base_ = stack_base;
   coroutine.untag()->stack_limit_ = stack_limit;
   coroutine.untag()->overflow_stack_limit_ = stack_limit + CalculateHeadroom(stack_base - stack_limit);
+  coroutine.untag()->to_state_.Initialize();
+  coroutine.untag()->to_state_.SetValue(coroutine.ptr());
   coroutine.untag()->set_trampoline(trampoline);
 
   coroutine.untag()->set_index(registry.Length());

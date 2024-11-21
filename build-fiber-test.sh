@@ -2,4 +2,4 @@
 
 set -e
 
-dart --enable_mirrors=true compile aot-snapshot   runtime/tests/vm/dart/fiber/fiber_test.dart
+dart compile aot-snapshot --enable-asserts runtime/tests/vm/dart/fiber/fiber_test.dart

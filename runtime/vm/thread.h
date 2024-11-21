@@ -5,6 +5,7 @@
 #ifndef RUNTIME_VM_THREAD_H_
 #define RUNTIME_VM_THREAD_H_
 
+#include "vm/tagged_pointer.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
@@ -1136,8 +1137,9 @@ class Thread : public ThreadState {
   // Visit all object pointers.
   void VisitObjectPointers(ObjectPointerVisitor* visitor,
                            ValidationPolicy validate_frames);
-  void RememberLiveTemporaries();
-  void DeferredMarkLiveTemporaries();
+
+  void RememberLiveTemporaries(Isolate* isolate);
+  void DeferredMarkLiveTemporaries(Isolate* isolate);
 
   bool IsValidHandle(Dart_Handle object) const;
   bool IsValidLocalHandle(Dart_Handle object) const;
@@ -1185,6 +1187,10 @@ class Thread : public ThreadState {
   };
   friend class RestoreWriteBarrierInvariantVisitor;
   void RestoreWriteBarrierInvariant(RestoreWriteBarrierInvariantOp op);
+  
+  void RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWriteBarrierInvariantOp op);
+
+  void VisitObjectPointersCoroutine(Isolate* isolate, ObjectPointerVisitor* visitor, ValidationPolicy validate_frames);
 
   // Set the current compiler state and return the previous compiler state.
   CompilerState* SetCompilerState(CompilerState* state) {

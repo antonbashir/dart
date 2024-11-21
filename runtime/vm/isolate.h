@@ -20,7 +20,6 @@
 #include "platform/atomic.h"
 #include "vm/base_isolate.h"
 #include "vm/class_table.h"
-#include "vm/coroutine.h"
 #include "vm/dispatch_table.h"
 #include "vm/exceptions.h"
 #include "vm/ffi_callback_metadata.h"
@@ -40,6 +39,7 @@
 #include "vm/thread_stack_resource.h"
 #include "vm/token_position.h"
 #include "vm/virtual_memory.h"
+#include "vm/coroutine.h"
 
 namespace dart {
 
@@ -1579,6 +1579,9 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   bool is_system_isolate_ = false;
   std::unique_ptr<IsolateObjectStore> isolate_object_store_;
   GrowableObjectArrayPtr coroutines_registry_;
+  
+  CoroutineState** coroutines_;
+  uword coroutines_count_;
   // End accessed from generated code.
 
   IsolateGroup* const isolate_group_;

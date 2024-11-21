@@ -8600,43 +8600,9 @@ LocationSummary* CoroutineTransferInstr::MakeLocationSummary(Zone* zone,
 }
 
 void CoroutineTransferInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
-  const Register kFromCoroutine = CoroutineTransferABI::kFromCoroutineReg;
-  const Register kToCoroutine = CoroutineTransferABI::kToCoroutineReg;
-  const Register kToStackLimit = CoroutineTransferABI::kToStackLimitReg;
-
-#if defined(TARGET_ARCH_ARM) || defined(TARGET_ARCH_ARM64)
-  SPILLS_LR_TO_FRAME({});
-#endif
-  __ LoadFieldFromOffset(TMP, kFromCoroutine, Coroutine::attributes_offset());
-  __ AndImmediate(TMP, ~Coroutine::CoroutineAttributes::running);
-  __ OrImmediate(TMP, Coroutine::CoroutineAttributes::suspended);
-  __ StoreFieldToOffset(TMP, kFromCoroutine, Coroutine::attributes_offset());
-
-  __ LoadFieldFromOffset(TMP, kToCoroutine, Coroutine::attributes_offset());
-  __ AndImmediate(TMP, ~Coroutine::CoroutineAttributes::suspended);
-  __ OrImmediate(TMP, Coroutine::CoroutineAttributes::running);
-  __ StoreFieldToOffset(TMP, kToCoroutine, Coroutine::attributes_offset());
-
-  __ PushRegister(FPREG);
-  __ StoreFieldToOffset(SPREG, kFromCoroutine, Coroutine::stack_base_offset());
-
-  __ LoadFieldFromOffset(SPREG, kToCoroutine, Coroutine::stack_base_offset());
-  __ PopRegister(FPREG);
-  if (!FLAG_precompiled_mode) __ RestoreCodePointer();
-  if (FLAG_precompiled_mode)
-    __ movq(PP, compiler::Address(THR, Thread::global_object_pool_offset()));
-
-  __ LoadFieldFromOffset(kToStackLimit, kToCoroutine,
-                         Coroutine::overflow_stack_limit_offset());
-  __ StoreToOffset(kToCoroutine, THR, Thread::coroutine_offset());
-  __ StoreToOffset(kToStackLimit, THR, Thread::saved_stack_limit_offset());
-
-  compiler::Label scheduled_interrupts;
-  __ LoadFromOffset(TMP, THR, Thread::stack_limit_offset());
-  __ testq(TMP, compiler::Immediate(Thread::kInterruptsMask));
-  __ BranchIf(ZERO, &scheduled_interrupts);
-  __ StoreToOffset(kToStackLimit, THR, Thread::stack_limit_offset());
-  __ Bind(&scheduled_interrupts);
+  compiler->GenerateStubCall(source(), StubCode::CoroutineTransfer(),
+                             UntaggedPcDescriptors::kOther, locs(), deopt_id(),
+                             env());
 }
 
 Definition* SuspendInstr::Canonicalize(FlowGraph* flow_graph) {

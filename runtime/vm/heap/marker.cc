@@ -152,6 +152,10 @@ class MarkingVisitorBase : public ObjectPointerVisitor {
           size = ProcessWeakArray(static_cast<WeakArrayPtr>(obj));
         } else if (class_id == kFinalizerEntryCid) {
           size = ProcessFinalizerEntry(static_cast<FinalizerEntryPtr>(obj));
+        } else if (class_id == kCoroutineCid) {
+          // Shape changing is not compatible with concurrent marking.
+          deferred_work_list_.Push(obj);
+          size = obj->untag()->HeapSize();
         } else if (class_id == kSuspendStateCid) {
           // Shape changing is not compatible with concurrent marking.
           deferred_work_list_.Push(obj);
@@ -315,6 +319,10 @@ class MarkingVisitorBase : public ObjectPointerVisitor {
           size = ProcessWeakArray(static_cast<WeakArrayPtr>(obj));
         } else if (class_id == kFinalizerEntryCid) {
           size = ProcessFinalizerEntry(static_cast<FinalizerEntryPtr>(obj));
+        } else if (sync && concurrent_ && class_id == kCoroutineCid) {
+          // Shape changing is not compatible with concurrent marking.
+          deferred_work_list_.Push(obj);
+          size = obj->untag()->HeapSize();
         } else if (sync && concurrent_ && class_id == kSuspendStateCid) {
           // Shape changing is not compatible with concurrent marking.
           deferred_work_list_.Push(obj);
