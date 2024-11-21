@@ -1370,7 +1370,7 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
       RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
       scan_next_dart_frame = false;
       const uword stub_fp = *reinterpret_cast<uword*>(coroutine_->untag()->native_stack_base());
-      StackFrameIterator frames_iterator(stub_fp, ValidationPolicy::kDontValidateFrames, this, cross_thread_policy);
+      StackFrameIterator frames_iterator(stub_fp, ValidationPolicy::kDontValidateFrames, this, cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
       StackFrame* frame = frames_iterator.NextFrame();
       while (frame != nullptr) {
         OS::Print("[native] Thread::RestoreWriteBarrierInvariantCoroutine 1: %s\n", frame->ToCString());
