@@ -8589,13 +8589,15 @@ void CoroutineForkInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
 LocationSummary* CoroutineTransferInstr::MakeLocationSummary(Zone* zone,
                                                              bool opt) const {
   const intptr_t kNumInputs = 2;
-  const intptr_t kNumTemps = 0;
+  const intptr_t kNumTemps = 1;
   LocationSummary* locs = new (zone)
       LocationSummary(zone, kNumInputs, kNumTemps, LocationSummary::kCall);
   locs->set_in(
       0, Location::RegisterLocation(CoroutineTransferABI::kFromCoroutineReg));
   locs->set_in(
       1, Location::RegisterLocation(CoroutineTransferABI::kToCoroutineReg));
+  locs->set_in(
+      0, Location::RegisterLocation(CoroutineTransferABI::kToStackLimitReg));
   return locs;
 }
 

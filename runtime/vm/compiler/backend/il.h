@@ -11492,6 +11492,7 @@ class CoroutineInitializeInstr : public TemplateDefinition<1, Throws> {
   virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
     return InputCount();
   }
+  virtual bool MayCreateUnsafeUntaggedPointer() const { return true; }
 
   DECLARE_INSTRUCTION(CoroutineInitialize);
   PRINT_OPERANDS_TO_SUPPORT
@@ -11520,6 +11521,7 @@ class CoroutineTransferInstr : public TemplateDefinition<2, Throws> {
   virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
     return InputCount();
   }
+  virtual bool MayCreateUnsafeUntaggedPointer() const { return true; }
 
   DECLARE_INSTRUCTION(CoroutineTransfer);
   PRINT_OPERANDS_TO_SUPPORT
@@ -11548,6 +11550,7 @@ class CoroutineForkInstr : public TemplateDefinition<2, Throws> {
   virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
     return InputCount();
   }
+  virtual bool MayCreateUnsafeUntaggedPointer() const { return true; }
 
   DECLARE_INSTRUCTION(CoroutineFork);
   PRINT_OPERANDS_TO_SUPPORT
