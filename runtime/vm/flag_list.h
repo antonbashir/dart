@@ -90,7 +90,7 @@ constexpr bool FLAG_support_il_printer = false;
     "Check validity of token positions while compiling flow graphs")           \
   P(collect_dynamic_function_names, bool, true,                                \
     "Collects all dynamic function names to identify unique targets")          \
-  P(compactor_tasks, int, 2,                                                   \
+  P(compactor_tasks, int, 0,                                                   \
     "The number of tasks to use for parallel compaction.")                     \
   P(concurrent_mark, bool, true, "Concurrent mark for old generation.")        \
   P(concurrent_sweep, bool, true, "Concurrent sweep for old generation.")      \
@@ -222,15 +222,15 @@ constexpr bool FLAG_support_il_printer = false;
   P(use_field_guards, bool, true, "Use field guards and track field types")    \
   C(use_osr, false, true, bool, true, "Use OSR")                               \
   P(use_slow_path, bool, false, "Whether to avoid inlined fast paths.")        \
-  P(verbose_gc, bool, false, "Enables verbose GC.")                            \
+  P(verbose_gc, bool, true, "Enables verbose GC.")                            \
   P(verbose_gc_hdr, int, 40, "Print verbose GC header interval.")              \
-  R(verify_after_gc, false, bool, false,                                       \
+  R(verify_after_gc, true, bool, true,                                       \
     "Enables heap verification after GC.")                                     \
-  R(verify_before_gc, false, bool, false,                                      \
+  R(verify_before_gc, true, bool, true,                                      \
     "Enables heap verification before GC.")                                    \
-  R(verify_store_buffer, false, bool, false,                                   \
+  R(verify_store_buffer, true, bool, true,                                   \
     "Enables store buffer verification before and after scavenges.")           \
-  R(verify_after_marking, false, bool, false,                                  \
+  R(verify_after_marking, true, bool, true,                                  \
     "Enables heap verification after marking.")                                \
   P(enable_slow_path_sharing, bool, true, "Enable sharing of slow-path code.") \
   P(shared_slow_path_triggers_gc, bool, false,                                 \

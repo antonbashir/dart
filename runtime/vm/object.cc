@@ -26660,6 +26660,7 @@ CodePtr SuspendState::GetCodeObject() const {
 }
 
 CoroutinePtr Coroutine::New(uintptr_t size, FunctionPtr trampoline) {
+  GcSafepointOperationScope safepoint(Thread::Current());
   auto isolate = Isolate::Current();
 //  auto finished = isolate->finished_coroutines();
   auto active = isolate->active_coroutines();
@@ -26795,6 +26796,7 @@ const char* Coroutine::ToCString() const {
 }
 
 void Coroutine::HandleJumpToFrame(Thread* thread, uword stack_pointer) {
+  GcSafepointOperationScope safepoint(Thread::Current());
   auto zone = thread->zone();
   auto& coroutines = GrowableObjectArray::Handle(zone, thread->isolate()->coroutines_registry());
   auto& found = Coroutine::Handle(zone);
@@ -26823,10 +26825,12 @@ void Coroutine::HandleJumpToFrame(Thread* thread, uword stack_pointer) {
 }
 
 void Coroutine::HandleRootEnter(Thread* thread, Zone* zone) {
+  GcSafepointOperationScope safepoint(Thread::Current());
   thread->EnterCoroutine(ptr());
 }
 
 void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
+  GcSafepointOperationScope safepoint(Thread::Current());
   auto& coroutines = GrowableObjectArray::Handle(zone, thread->isolate()->coroutines_registry());
   auto& coroutine = Coroutine::Handle(zone);
 
@@ -26863,12 +26867,14 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
 }
 
 void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
+  GcSafepointOperationScope safepoint(Thread::Current());
   auto active = Isolate::Current()->active_coroutines();
   CoroutineLink::StealHead(active, to_state());
   thread->EnterCoroutine(ptr());
 }
 
 void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
+  GcSafepointOperationScope safepoint(Thread::Current());
   auto saved_caller = caller();
   auto new_caller_state = (saved_caller->untag()->attributes() & ~CoroutineAttributes::suspended) | CoroutineAttributes::running;
   saved_caller->untag()->set_attributes(new_caller_state);

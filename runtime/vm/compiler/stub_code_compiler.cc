@@ -3247,7 +3247,7 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ Drop(1);
 
   __ PushRegister(FPREG);
-  __ StoreFieldToOffset(SPREG, kCoroutine, Coroutine::native_stack_base_offset());
+  __ StoreCompressedIntoObjectOffset(kCoroutine, Coroutine::native_stack_base_offset(), SPREG);
 
   __ LoadFieldFromOffset(SPREG, kCoroutine, Coroutine::stack_base_offset());
   __ PushRegister(kCoroutine);
@@ -3260,7 +3260,7 @@ void StubCodeCompiler::GenerateCoroutineInitializeStub() {
   __ Call(compiler::FieldAddress(FUNCTION_REG, Function::entry_point_offset()));
 
   __ PopRegister(kCoroutine);
-  __ StoreFieldToOffset(SPREG, kCoroutine, Coroutine::stack_base_offset());
+  __ StoreCompressedIntoObjectOffset(kCoroutine, Coroutine::stack_base_offset(), SPREG);
 
   __ LoadFieldFromOffset(SPREG, kCoroutine, Coroutine::native_stack_base_offset());
   __ PopRegister(FPREG);
@@ -3294,7 +3294,7 @@ void StubCodeCompiler::GenerateCoroutineForkStub() {
   __ LoadCompressedFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
 
   __ PushRegister(FPREG);
-  __ StoreFieldToOffset(SPREG, kCallerCoroutine, Coroutine::stack_base_offset());
+  __ StoreCompressedIntoObjectOffset(kCallerCoroutine, Coroutine::stack_base_offset(), SPREG);
 
   __ LoadFieldFromOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
   __ PushRegister(kForkedCoroutine);
@@ -3308,7 +3308,7 @@ void StubCodeCompiler::GenerateCoroutineForkStub() {
   __ call(TMP);
   
   __ PopRegister(kForkedCoroutine);
-  __ StoreFieldToOffset(SPREG, kForkedCoroutine, Coroutine::stack_base_offset());
+  __ StoreCompressedIntoObjectOffset(kForkedCoroutine, Coroutine::stack_base_offset(), SPREG);
 
   __ LoadCompressedFieldFromOffset(kCallerCoroutine, kForkedCoroutine, Coroutine::caller_offset());
 
@@ -3348,7 +3348,7 @@ void StubCodeCompiler::GenerateCoroutineTransferStub() {
   __ StoreFieldToOffset(TMP, kToCoroutine, Coroutine::attributes_offset());
 
   __ PushRegister(FPREG);
-  __ StoreFieldToOffset(SPREG, kFromCoroutine, Coroutine::stack_base_offset());
+  __ StoreCompressedIntoObjectOffset(kFromCoroutine, Coroutine::stack_base_offset(), SPREG);
 
   __ LoadFieldFromOffset(SPREG, kToCoroutine, Coroutine::stack_base_offset());
   __ PopRegister(FPREG);
