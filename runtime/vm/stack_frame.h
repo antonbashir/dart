@@ -241,7 +241,7 @@ class StackFrameIterator {
                      ValidationPolicy validation_policy,
                      Thread* thread,
                      CrossThreadPolicy cross_thread_policy,
-                     StackOwner stack_owner);
+                     StackOwner owner);
   // Iterator for iterating over all frames from the current frame (given by its
   // fp, sp, and pc) to the first EntryFrame.
   StackFrameIterator(uword fp,

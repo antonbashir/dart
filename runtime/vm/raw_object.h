@@ -3822,8 +3822,6 @@ class UntaggedCoroutine : public UntaggedInstance {
   }
 
   static void VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor);
-  
-  static bool LastFrame(StackFrame* frame, CoroutinePtr coroutine);
 };
 
 #undef WSR_COMPRESSED_POINTER_FIELD

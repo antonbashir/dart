@@ -167,7 +167,7 @@ bool StackFrame::IsStubFrame() const {
 }
 
 const char* StackFrame::ToCString() const {
-//  ASSERT(thread_ == Thread::Current());
+  //  ASSERT(thread_ == Thread::Current());
   Zone* zone = Thread::Current()->zone();
   // const Code& code = Code::Handle(zone, GetCodeObject());
   // const char* name =
@@ -521,11 +521,11 @@ StackFrameIterator::StackFrameIterator(uword last_fp,
                                        ValidationPolicy validation_policy,
                                        Thread* thread,
                                        CrossThreadPolicy cross_thread_policy,
-                                       StackOwner stack_owner)
+                                       StackOwner owner)
     : validate_(validation_policy == ValidationPolicy::kValidateFrames),
       entry_(thread),
       exit_(thread),
-      frames_(thread, stack_owner),
+      frames_(thread, owner),
       current_frame_(nullptr),
       thread_(thread) {
   ASSERT(cross_thread_policy == kAllowCrossThreadIteration ||

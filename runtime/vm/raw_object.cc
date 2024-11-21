@@ -656,55 +656,37 @@ intptr_t UntaggedCoroutine::VisitCoroutinePointers(CoroutinePtr raw_obj, ObjectP
 }
 
 void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor) {
-  if (coroutine.untag()->native_stack_base() != 0) {
-    auto native_stack = coroutine.untag()->native_stack_base();
-    auto attributes = coroutine.untag()->attributes();
-    Thread* thread = Thread::Current();
-    if (native_stack != 0 && (attributes & (Coroutine::CoroutineAttributes::suspended | Coroutine::CoroutineAttributes::running)) != 0) {
-      const uword stub_fp = *reinterpret_cast<uword*>(native_stack);
-      const uword wrapper_fp = *reinterpret_cast<uword*>(stub_fp);
-      const uword exit_fp = *reinterpret_cast<uword*>(wrapper_fp);
-      StackFrameIterator frames_iterator(
-          exit_fp, ValidationPolicy::kDontValidateFrames, thread,
-          StackFrameIterator::kAllowCrossThreadIteration,
-          StackFrameIterator::kStackOwnerCoroutine);
-      StackFrame* frame = frames_iterator.NextFrame();
-      while (frame != nullptr) {
-        OS::Print("UntaggedCoroutine::VisitNativeStack: %s\n", frame->ToCString());
-        frame->VisitObjectPointers(visitor);
-        frame = frames_iterator.NextFrame();
-      }
-    }
-  }
+  auto index = coroutine.untag()->index();
   auto stack = coroutine.untag()->stack_base();
-  auto attributes = coroutine.untag()->attributes();
+  auto native_stack = coroutine.untag()->native_stack_base();
   Thread* thread = Thread::Current();
-  if ((attributes & (Coroutine::CoroutineAttributes::suspended)) != 0) {
-    const uword stub_fp = *reinterpret_cast<uword*>(stack);
-    const uword wrapper_fp = *reinterpret_cast<uword*>(stub_fp);
-    const uword exit_fp = *reinterpret_cast<uword*>(wrapper_fp);
-    StackFrameIterator frames_iterator(
-        exit_fp, ValidationPolicy::kDontValidateFrames, thread,
-        StackFrameIterator::kAllowCrossThreadIteration,
-        StackFrameIterator::kStackOwnerCoroutine);
-    StackFrame* frame = frames_iterator.NextFrame();
-    while (frame != nullptr) {
-      OS::Print("UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
+  OS::Print("UntaggedCoroutine::VisitStack: %ld\n", index);
+  const uword stub_fp = *reinterpret_cast<uword*>(stack);
+  StackFrameIterator coroutine_frames_iterator(stub_fp, ValidationPolicy::kDontValidateFrames, thread, StackFrameIterator::kAllowCrossThreadIteration, StackFrameIterator::kStackOwnerCoroutine);
+  StackFrame* frame = coroutine_frames_iterator.NextFrame();
+  while (frame != nullptr) {
+    OS::Print("UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
+    frame->VisitObjectPointers(visitor);
+    frame = coroutine_frames_iterator.NextFrame();
+    if (frame != nullptr && StubCode::InCoroutineForkStub(frame->GetCallerPc())) {
+      OS::Print("[last] UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
       frame->VisitObjectPointers(visitor);
-      frame = frames_iterator.NextFrame();
-      if (frame != nullptr && UntaggedCoroutine::LastFrame(frame, coroutine)) {
-        OS::Print("[last] UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
+      break;
+    }
+    if (frame != nullptr && StubCode::InCoroutineInitializeStub(frame->GetCallerPc())) {
+      OS::Print("[last] UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
+      frame->VisitObjectPointers(visitor);
+      const uword stub_fp = *reinterpret_cast<uword*>(native_stack);
+      StackFrameIterator native_coroutine_frames_iterator(stub_fp, ValidationPolicy::kDontValidateFrames, thread, StackFrameIterator::kAllowCrossThreadIteration, StackFrameIterator::kStackOwnerCoroutine);
+      StackFrame* frame = native_coroutine_frames_iterator.NextFrame();
+      while (frame != nullptr) {
+        OS::Print("[native] UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
         frame->VisitObjectPointers(visitor);
-        break;
+        frame = native_coroutine_frames_iterator.NextFrame();
       }
+      break;
     }
   }
-}
-
-bool UntaggedCoroutine::LastFrame(StackFrame* frame, CoroutinePtr coroutine) {
-  if (StubCode::InCoroutineStub(frame->GetCallerPc())) return true;
-  if (frame->GetCallerSp() < coroutine->untag()->stack_limit()) return true;
-  return frame->GetCallerSp() >= coroutine->untag()->stack_root();
 }
 
 bool UntaggedCode::ContainsPC(const ObjectPtr raw_obj, uword pc) {
