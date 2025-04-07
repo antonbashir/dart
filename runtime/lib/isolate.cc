@@ -370,7 +370,6 @@ class MessageValidator : private WorkSet {
           MESSAGE_SNAPSHOT_ILLEGAL(ReceivePort)
           MESSAGE_SNAPSHOT_ILLEGAL(UserTag)
           MESSAGE_SNAPSHOT_ILLEGAL(SuspendState)
-          MESSAGE_SNAPSHOT_ILLEGAL(Coroutine)
         default:
           klass = class_table_->At(cid);
           if (klass.is_isolate_unsendable()) {

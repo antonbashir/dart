@@ -85,17 +85,7 @@ class ParsedFunction;
   V(WeakProperty, UntaggedWeakProperty, value, Dynamic, WEAK)                 \
   V(WeakReference, UntaggedWeakReference, target, Dynamic, WEAK)              \
   V(WeakReference, UntaggedWeakReference, type_arguments, TypeArguments,      \
-    FINAL)                                                                    \
-  V(Coroutine, UntaggedCoroutine, name, Dynamic, VAR)                         \
-  V(Coroutine, UntaggedCoroutine, entry, Closure, VAR)                        \
-  V(Coroutine, UntaggedCoroutine, trampoline, Function, VAR)                  \
-  V(Coroutine, UntaggedCoroutine, processor, Dynamic, VAR)                    \
-  V(Coroutine, UntaggedCoroutine, to_processor_next, Dynamic, VAR)            \
-  V(Coroutine, UntaggedCoroutine, to_processor_previous, Dynamic, VAR)        \
-  V(Coroutine, UntaggedCoroutine, to_state, Dynamic, VAR)                     \
-  V(Coroutine, UntaggedCoroutine, caller, Coroutine, VAR)                     \
-  V(Coroutine, UntaggedCoroutine, scheduler, Coroutine, VAR)                  \
-  V(Coroutine, UntaggedCoroutine, argument, Dynamic, VAR)
+    FINAL)
 
 // The list of slots that correspond to non-nullable boxed fields of native
 // Dart objects that contain integers in the following format:
@@ -188,10 +178,7 @@ class ParsedFunction;
     FINAL)                                                                    \
   V(FunctionType, UntaggedFunctionType, packed_type_parameter_counts, Uint16, \
     FINAL)                                                                    \
-  V(SubtypeTestCache, UntaggedSubtypeTestCache, num_inputs, Uint32, FINAL)    \
-  V(Coroutine, UntaggedCoroutine, stack_size, IntPtr, VAR)                    \
-  V(Coroutine, UntaggedCoroutine, index, IntPtr, VAR)                         \
-  V(Coroutine, UntaggedCoroutine, attributes, IntPtr, VAR)
+  V(SubtypeTestCache, UntaggedSubtypeTestCache, num_inputs, Uint32, FINAL)
 
 // Native slots containing untagged addresses that do not exist in JIT mode.
 // See UNTAGGED_NATIVE_DART_SLOTS_LIST for the format.
@@ -242,12 +229,10 @@ class ParsedFunction;
 //
 // Note: Currently LoadFieldInstr::IsImmutableLengthLoad() assumes that no
 // slots of non-Dart values represent length loads.
-#define NULLABLE_TAGGED_NATIVE_NONDART_SLOTS_LIST(V)           \
-  V(Isolate, _, finalizers, GrowableObjectArray, VAR)          \
-  V(Isolate, _, coroutines_registry, GrowableObjectArray, VAR) \
-  V(LocalHandle, _, ptr, Dynamic, VAR)                         \
-  V(ObjectStore, _, record_field_names, Array, VAR)            \
-  V(Thread, _, coroutine, Coroutine, VAR)                      \
+#define NULLABLE_TAGGED_NATIVE_NONDART_SLOTS_LIST(V)  \
+  V(Isolate, _, finalizers, GrowableObjectArray, VAR) \
+  V(LocalHandle, _, ptr, Dynamic, VAR)                \
+  V(ObjectStore, _, record_field_names, Array, VAR)   \
   V(PersistentHandle, _, ptr, Dynamic, VAR)
 
 // List of slots that correspond to fields of non-Dart objects containing
@@ -268,7 +253,11 @@ class ParsedFunction;
 // Note: Currently LoadFieldInstr::IsImmutableLengthLoad() assumes that no
 // slots of non-Dart values represent length loads.
 #define UNBOXED_NATIVE_NONDART_SLOTS_LIST(V) \
-  V(StreamInfo, _, enabled, IntPtr, VAR)
+  V(StreamInfo, _, enabled, IntPtr, VAR)     \
+  V(Coroutine, _, index, IntPtr, VAR)        \
+  V(Coroutine, _, caller, IntPtr, VAR)       \
+  V(Coroutine, _, attributes, IntPtr, VAR)   \
+  V(Coroutine, _, owner, IntPtr, VAR)
 
 // List of slots that correspond to fields of non-Dart objects containing
 // untagged addresses in the following format:
@@ -293,12 +282,13 @@ class ParsedFunction;
 // fields, they should never change during a given execution of the code
 // generated for a function and the compiler only does intra-procedural
 // load optimizations.
-#define UNTAGGED_NATIVE_NONDART_SLOTS_LIST(V)    \
-  V(IsolateGroup, _, object_store, false, FINAL) \
-  V(Thread, _, api_top_scope, false, VAR)        \
-  V(Thread, _, isolate, false, FINAL)            \
-  V(Thread, _, isolate_group, false, FINAL)      \
-  V(Thread, _, service_extension_stream, false, FINAL)
+#define UNTAGGED_NATIVE_NONDART_SLOTS_LIST(V)          \
+  V(IsolateGroup, _, object_store, false, FINAL)       \
+  V(Thread, _, api_top_scope, false, VAR)              \
+  V(Thread, _, isolate, false, FINAL)                  \
+  V(Thread, _, isolate_group, false, FINAL)            \
+  V(Thread, _, service_extension_stream, false, FINAL) \
+  V(Thread, _, coroutine, false, VAR)
 
 // No untagged slot on a non-Dart object should contain a GC-movable address.
 // The gc_may_move field is only there so that any code that operates on

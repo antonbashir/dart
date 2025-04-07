@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "dart_api.h"
 #include "platform/memory_sanitizer.h"
 #include "platform/thread_sanitizer.h"
 #include "vm/code_descriptors.h"
@@ -3368,8 +3369,8 @@ DEFINE_RUNTIME_ENTRY(FixAllocationStubTarget, 0) {
 
 const char* DeoptReasonToCString(ICData::DeoptReasonId deopt_reason) {
   switch (deopt_reason) {
-#define DEOPT_REASON_TO_TEXT(name)                                             \
-  case ICData::kDeopt##name:                                                   \
+#define DEOPT_REASON_TO_TEXT(name) \
+  case ICData::kDeopt##name:       \
     return #name;
     DEOPT_REASONS(DEOPT_REASON_TO_TEXT)
 #undef DEOPT_REASON_TO_TEXT
@@ -3869,30 +3870,36 @@ DEFINE_RUNTIME_ENTRY(FfiAsyncCallbackSend, 1) {
       Message::New(target_port, handle, Message::kNormalPriority));
 }
 
-DEFINE_RUNTIME_ENTRY(EnterCoroutine, 1) {
-  auto& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
-  coroutine.HandleRootEnter(thread, zone);
+DEFINE_LEAF_RUNTIME_ENTRY(void, EnterCoroutine, 1, uword coroutine) {
+  auto thread = Thread::Current();
+  reinterpret_cast<Coroutine*>(coroutine)->HandleRootEnter(thread, thread->zone());
 }
+END_LEAF_RUNTIME_ENTRY
 
-DEFINE_RUNTIME_ENTRY(ExitCoroutine, 0) {
-  auto& coroutine = Coroutine::CheckedHandle(zone, thread->coroutine());
-  coroutine.HandleRootExit(thread, zone);
+DEFINE_LEAF_RUNTIME_ENTRY(void, ExitCoroutine, 0) {
+  auto thread = Thread::Current();
+  auto coroutine = thread->coroutine();
+  coroutine->HandleRootExit(thread, thread->zone());
 }
+END_LEAF_RUNTIME_ENTRY
 
-DEFINE_RUNTIME_ENTRY(EnterForkedCoroutine, 1) {
-  auto& coroutine = Coroutine::CheckedHandle(zone, arguments.ArgAt(0));
-  coroutine.HandleForkedEnter(thread, zone);
+DEFINE_LEAF_RUNTIME_ENTRY(void, EnterForkedCoroutine, 1, uword coroutine) {
+  auto thread = Thread::Current();
+  reinterpret_cast<Coroutine*>(coroutine)->HandleForkedEnter(thread, thread->zone());
 }
+END_LEAF_RUNTIME_ENTRY
 
-DEFINE_RUNTIME_ENTRY(ExitForkedCoroutine, 0) {
-  auto& coroutine = Coroutine::CheckedHandle(zone, thread->coroutine());
-  coroutine.HandleForkedExit(thread, zone);
+DEFINE_LEAF_RUNTIME_ENTRY(void, ExitForkedCoroutine, 0) {
+  auto thread = Thread::Current();
+  auto coroutine = thread->coroutine();
+  coroutine->HandleForkedExit(thread, thread->zone());
 }
+END_LEAF_RUNTIME_ENTRY
 
-DEFINE_RUNTIME_ENTRY(JumpToFrameCoroutine, 1) {
-  Coroutine::Handle(Thread::Current()->coroutine()).HandleJumpToFrame(thread, Smi::Value(Smi::RawCast(arguments.ArgAt(0))));
+DEFINE_LEAF_RUNTIME_ENTRY(void, JumpToFrameCoroutine, 1, uword stack_pointer) {
+  Thread::Current()->coroutine()->HandleJumpToFrame(Thread::Current(), stack_pointer);
 }
-
+END_LEAF_RUNTIME_ENTRY
 
 // Use expected function signatures to help MSVC compiler resolve overloading.
 typedef double (*UnaryMathCFunction)(double x);

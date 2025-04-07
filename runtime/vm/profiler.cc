@@ -375,8 +375,8 @@ static bool GetAndValidateThreadStackBounds(OSThread* os_thread,
 
   if (!use_simulator_stack_bounds) {
     if (thread->has_coroutine()) {
-      *stack_lower = thread->coroutine()->untag()->stack_limit();
-      *stack_upper = thread->coroutine()->untag()->stack_base();
+      *stack_lower = thread->coroutine()->stack_limit();
+      *stack_upper = thread->coroutine()->stack_base();
     } else {
       *stack_lower = os_thread->stack_limit();
       *stack_upper = os_thread->stack_base();
@@ -404,8 +404,8 @@ static bool GetAndValidateCurrentThreadStackBounds(uintptr_t fp,
   ASSERT(stack_upper != nullptr);
 
   if (Thread::Current() != nullptr && Thread::Current()->has_coroutine()) {
-    *stack_lower = Thread::Current()->coroutine()->untag()->stack_limit();
-    *stack_upper = Thread::Current()->coroutine()->untag()->stack_base();
+    *stack_lower = Thread::Current()->coroutine()->stack_limit();
+    *stack_upper = Thread::Current()->coroutine()->stack_base();
   } else {
     if (!OSThread::GetCurrentStackBounds(stack_lower, stack_upper)) {
       return false;

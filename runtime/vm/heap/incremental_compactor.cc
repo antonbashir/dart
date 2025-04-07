@@ -476,14 +476,6 @@ class IncrementalForwardingVisitor : public ObjectPointerVisitor,
     return true;
   }
 
-  bool CanVisitCoroutinePointers(CoroutinePtr coroutine) override {
-    if (!can_visit_coroutines_) {
-      coroutines_.Add(coroutine);
-      return false;
-    }
-    return true;
-  }
-
   void UpdateViews() {
     const intptr_t length = typed_data_views_.length();
     for (intptr_t i = 0; i < length; ++i) {
@@ -510,20 +502,10 @@ class IncrementalForwardingVisitor : public ObjectPointerVisitor,
     }
   }
 
-  void UpdateCoroutines() {
-    can_visit_coroutines_ = true;
-    const intptr_t length = coroutines_.length();
-    for (intptr_t i = 0; i < length; ++i) {
-      coroutines_[i]->untag()->VisitPointers(this);
-    }
-  }
-
  private:
   bool can_visit_suspend_states_ = false;
-  bool can_visit_coroutines_ = false;
   MallocGrowableArray<TypedDataViewPtr> typed_data_views_;
   MallocGrowableArray<SuspendStatePtr> suspend_states_;
-  MallocGrowableArray<CoroutinePtr> coroutines_;
 
   DISALLOW_COPY_AND_ASSIGN(IncrementalForwardingVisitor);
 };
@@ -731,11 +713,6 @@ class EpilogueTask : public ThreadPool::Task {
       // canonicalized_stack_map_entries.
       TIMELINE_FUNCTION_GC_DURATION(thread, "SuspendStates");
       visitor.UpdateSuspendStates();
-    }
-
-    {
-      TIMELINE_FUNCTION_GC_DURATION(thread, "Coroutines");
-      visitor.UpdateCoroutines();
     }
 
     if (state_->TakeResetProgressBars()) {

@@ -10,6 +10,7 @@
 // For `AllocateObjectInstr::WillAllocateNewOrRemembered`
 // For `GenericCheckBoundInstr::UseUnboxedRepresentation`
 #include "vm/compiler/backend/il.h"
+#include "vm/stub_code.h"
 
 #define SHOULD_NOT_INCLUDE_RUNTIME
 
@@ -1712,10 +1713,10 @@ void StubCodeCompiler::GenerateAllocateContextStub() {
   __ EnterStubFrame();
   __ pushq(R9);  // Setup space on stack for the return value.
   __ SmiTag(R10);
-  __ pushq(R10);  // Push number of context variables.
+  __ pushq(R10);                                    // Push number of context variables.
   __ CallRuntime(kAllocateContextRuntimeEntry, 1);  // Allocate context.
-  __ popq(RAX);  // Pop number of context variables argument.
-  __ popq(RAX);  // Pop the new context object.
+  __ popq(RAX);                                     // Pop number of context variables argument.
+  __ popq(RAX);                                     // Pop the new context object.
   // Write-barrier elimination might be enabled for this context (depending on
   // the size). To be sure we will check if the allocated object is in old
   // space and if so call a leaf runtime to add it to the remembered set.
@@ -1783,8 +1784,8 @@ void StubCodeCompiler::GenerateCloneContextStub() {
   // Create a stub frame.
   __ EnterStubFrame();
 
-  __ PushObject(NullObject());  // Make space on stack for the return value.
-  __ pushq(R9);                 // Push context.
+  __ PushObject(NullObject());                   // Make space on stack for the return value.
+  __ pushq(R9);                                  // Push context.
   __ CallRuntime(kCloneContextRuntimeEntry, 1);  // Clone context.
   __ popq(RAX);                                  // Pop context argument.
   __ popq(RAX);                                  // Pop the new context object.
@@ -3106,7 +3107,6 @@ void StubCodeCompiler::GenerateJumpToFrameStub() {
                                  /*ignore_unwind_in_progress=*/true);
   __ Bind(&exit_through_non_ffi);
 
-
   // Set the tag.
   __ movq(Assembler::VMTagAddress(), Immediate(VMTag::kDartTagId));
 
@@ -3115,14 +3115,15 @@ void StubCodeCompiler::GenerateJumpToFrameStub() {
           compiler::Address(THR, compiler::target::Thread::coroutine_offset()));
   __ CompareObject(TMP, NullObject());
   __ BranchIf(EQUAL, &no_coroutine);
-  __ MoveRegister(TMP, RSP);
-  __ SmiTag(TMP);
+
   __ PushRegister(CallingConventions::kArg1Reg);
-  __ PushObject(NullObject());
-  __ PushRegister(TMP);
-  __ CallRuntime(kJumpToFrameCoroutineRuntimeEntry, 1);
-  __ Drop(2);
+  {
+    LeafRuntimeScope rt(assembler, 0, false);
+    __ MoveRegister(CallingConventions::kArg1Reg, CallingConventions::kArg2Reg);
+    rt.Call(kJumpToFrameCoroutineRuntimeEntry, 1);
+  }
   __ PopRegister(CallingConventions::kArg1Reg);
+  
   __ Bind(&no_coroutine);
 
   // Clear top exit frame.

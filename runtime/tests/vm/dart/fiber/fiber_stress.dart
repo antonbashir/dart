@@ -4,10 +4,7 @@ import 'dart:typed_data';
 void main() {
   Fiber.launch(() {
     final iterations = 100000;
-    final delta = iterations * 0.1;
-    var percents = 0;
     for (var i = 0; i < iterations; i++) {
-      print(i.toString());
       Fiber.spawn(work1);
       Fiber.spawn(work1);
       Fiber.spawn(work1);
@@ -30,6 +27,7 @@ void work1() {
 @pragma("vm:never-inline")
 void work2() {
   work3();
+  Fiber.spawn(work3);
 }
 
 @pragma("vm:never-inline")

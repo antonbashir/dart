@@ -8,7 +8,6 @@
 #include "vm/dart.h"
 #include "vm/heap/become.h"
 #include "vm/heap/freelist.h"
-#include "vm/heap/safepoint.h"
 #include "vm/isolate.h"
 #include "vm/isolate_reload.h"
 #include "vm/object.h"
@@ -647,45 +646,6 @@ intptr_t UntaggedSuspendState::VisitSuspendStatePointers(
   }
 
   return SuspendState::InstanceSize(raw_obj->untag()->frame_capacity());
-}
-
-intptr_t UntaggedCoroutine::VisitCoroutinePointers(CoroutinePtr raw_obj, ObjectPointerVisitor* visitor) {
-  visitor->VisitCompressedPointers(raw_obj->heap_base(), raw_obj->untag()->from(), raw_obj->untag()->to());
-  return Coroutine::InstanceSize();
-}
-
-void UntaggedCoroutine::VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor) {
-  auto index = coroutine.untag()->index();
-  auto stack = coroutine.untag()->stack_base();
-  auto native_stack = coroutine.untag()->native_stack_base();
-  Thread* thread = Thread::Current();
-  OS::Print("UntaggedCoroutine::VisitStack: %ld\n", index);
-  const uword stub_fp = *reinterpret_cast<uword*>(stack);
-  StackFrameIterator coroutine_frames_iterator(stub_fp, ValidationPolicy::kDontValidateFrames, thread, StackFrameIterator::kAllowCrossThreadIteration, StackFrameIterator::kStackOwnerCoroutine);
-  StackFrame* frame = coroutine_frames_iterator.NextFrame();
-  while (frame != nullptr) {
-    OS::Print("UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
-    frame->VisitObjectPointers(visitor);
-    frame = coroutine_frames_iterator.NextFrame();
-    if (frame != nullptr && StubCode::InCoroutineForkStub(frame->GetCallerPc())) {
-      OS::Print("[last] UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
-      frame->VisitObjectPointers(visitor);
-      break;
-    }
-    if (frame != nullptr && StubCode::InCoroutineInitializeStub(frame->GetCallerPc())) {
-      OS::Print("[last] UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
-      frame->VisitObjectPointers(visitor);
-      const uword stub_fp = *reinterpret_cast<uword*>(native_stack);
-      StackFrameIterator native_coroutine_frames_iterator(stub_fp, ValidationPolicy::kDontValidateFrames, thread, StackFrameIterator::kAllowCrossThreadIteration, StackFrameIterator::kStackOwnerCoroutine);
-      StackFrame* frame = native_coroutine_frames_iterator.NextFrame();
-      while (frame != nullptr) {
-        OS::Print("[native] UntaggedCoroutine::VisitStack: %s\n", frame->ToCString());
-        frame->VisitObjectPointers(visitor);
-        frame = native_coroutine_frames_iterator.NextFrame();
-      }
-      break;
-    }
-  }
 }
 
 bool UntaggedCode::ContainsPC(const ObjectPtr raw_obj, uword pc) {

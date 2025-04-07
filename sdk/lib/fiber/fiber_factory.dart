@@ -3,12 +3,16 @@ part of dart.fiber;
 class _FiberFactory {
   @pragma("vm:prefer-inline")
   static Fiber _scheduler(_FiberProcessor processor) {
-    final coroutine = _Coroutine._(_kSchedulerStackSize, Fiber._run);
-    coroutine._name = _kSchedulerFiber;
-    coroutine._entry = processor._idle == null ? _FiberProcessor._loopFinite : _FiberProcessor._loopInfinite;
-    coroutine._processor = processor;
-    coroutine._attributes = _kFiberCreated;
-    return Fiber(coroutine);
+    final fiber = _pool.allocate();
+    final coroutine = Coroutine_create(_kSchedulerStackSize, fiber._index, fiber, _kFiberCreated, Fiber._run)!;
+    fiber._initialize(
+      name: _kSchedulerFiber,
+      size: _kSchedulerStackSize,
+      coroutine: coroutine,
+      entry: processor._idle == null ? _FiberProcessor._loopFinite : _FiberProcessor._loopInfinite,
+      processor: processor,
+    );
+    return fiber;
   }
 
   @pragma("vm:prefer-inline")
@@ -18,15 +22,19 @@ class _FiberFactory {
     Object? argument = null,
     int size = _kDefaultStackSize,
   }) {
-    final coroutine = _Coroutine._(size, Fiber._run);
-    coroutine._name = _kMainFiber;
-    coroutine._entry = entry;
-    coroutine._processor = processor;
-    coroutine._scheduler = processor._scheduler;
-    _FiberProcessorLink._create(coroutine);
-    if (argument != null) coroutine._argument = argument;
-    coroutine._attributes = _kFiberCreated;
-    return Fiber(coroutine);
+    final fiber = _pool.allocate();
+    final coroutine = Coroutine_create(size, fiber._index, fiber, _kFiberCreated, Fiber._run)!;
+    fiber._initialize(
+      name: _kMainFiber,
+      size: _kDefaultStackSize,
+      coroutine: coroutine,
+      entry: entry,
+      processor: processor,
+      scheduler: processor._scheduler,
+      argument: argument,
+    );
+    _FiberProcessorLink._create(fiber);
+    return fiber;
   }
 
   @pragma("vm:prefer-inline")
@@ -38,14 +46,18 @@ class _FiberFactory {
     String? name,
   }) {
     final current = Fiber.current;
-    final coroutine = _Coroutine._(size, Fiber._run);
-    coroutine._name = name ?? entry.toString();
-    coroutine._entry = entry;
-    coroutine._processor = current._processor;
-    coroutine._scheduler = current._scheduler;
-    _FiberProcessorLink._create(coroutine);
-    if (argument != null) coroutine._argument = argument;
-    coroutine._attributes = FiberAttributes._calculate(persistent: persistent).value;
-    return Fiber(coroutine);
+    final fiber = _pool.allocate();
+    final coroutine = Coroutine_create(size, fiber._index, fiber, FiberAttributes._calculate(persistent: persistent).value, Fiber._run)!;
+    fiber._initialize(
+      name: name ?? entry.toString(),
+      size: size,
+      coroutine: coroutine,
+      entry: entry,
+      processor: current._processor,
+      scheduler: current._scheduler,
+      argument: argument,
+    );
+    _FiberProcessorLink._create(fiber);
+    return fiber;
   }
 }

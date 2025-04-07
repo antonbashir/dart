@@ -92,8 +92,8 @@ constexpr bool FLAG_support_il_printer = false;
     "Collects all dynamic function names to identify unique targets")          \
   P(compactor_tasks, int, 2,                                                   \
     "The number of tasks to use for parallel compaction.")                     \
-  P(concurrent_mark, bool, false, "Concurrent mark for old generation.")        \
-  P(concurrent_sweep, bool, false, "Concurrent sweep for old generation.")      \
+  P(concurrent_mark, bool, true, "Concurrent mark for old generation.")        \
+  P(concurrent_sweep, bool, true, "Concurrent sweep for old generation.")      \
   C(deoptimize_alot, false, false, bool, false,                                \
     "Deoptimizes we are about to return to Dart code from native entries.")    \
   C(deoptimize_every, 0, 0, int, 0,                                            \
@@ -222,15 +222,15 @@ constexpr bool FLAG_support_il_printer = false;
   P(use_field_guards, bool, true, "Use field guards and track field types")    \
   C(use_osr, false, true, bool, true, "Use OSR")                               \
   P(use_slow_path, bool, false, "Whether to avoid inlined fast paths.")        \
-  P(verbose_gc, bool, true, "Enables verbose GC.")                            \
+  P(verbose_gc, bool, false, "Enables verbose GC.")                            \
   P(verbose_gc_hdr, int, 40, "Print verbose GC header interval.")              \
-  R(verify_after_gc, true, bool, true,                                       \
+  R(verify_after_gc, false, bool, false,                                       \
     "Enables heap verification after GC.")                                     \
-  R(verify_before_gc, true, bool, true,                                      \
+  R(verify_before_gc, false, bool, false,                                      \
     "Enables heap verification before GC.")                                    \
-  R(verify_store_buffer, true, bool, true,                                   \
+  R(verify_store_buffer, false, bool, false,                                   \
     "Enables store buffer verification before and after scavenges.")           \
-  R(verify_after_marking, true, bool, true,                                  \
+  R(verify_after_marking, false, bool, false,                                  \
     "Enables heap verification after marking.")                                \
   P(enable_slow_path_sharing, bool, true, "Enable sharing of slow-path code.") \
   P(shared_slow_path_triggers_gc, bool, false,                                 \
@@ -244,8 +244,6 @@ constexpr bool FLAG_support_il_printer = false;
   D(support_rr, bool, false, "Support running within RR.")                     \
   P(coroutines_registry_initial_capacity, int, 64,                             \
     "All coroutines array initial size.")                                      \
-  P(coroutines_registry_shrink_capacity, int, 1024 * 1024,                     \
-    "Shrink coroutines registry when reached this capacity.")                  \
   P(verify_entry_points, bool, false,                                          \
     "Throw API error on invalid member access through native API. See "        \
     "entry_point_pragma.md")                                                   \

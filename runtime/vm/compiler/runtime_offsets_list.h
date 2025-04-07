@@ -225,6 +225,10 @@
   FIELD(StoreBufferBlock, pointers_offset)                                     \
   FIELD(StoreBufferBlock, top_offset)                                          \
   FIELD(StreamInfo, enabled_offset)                                            \
+  FIELD(Coroutine, attributes_offset)                                          \
+  FIELD(Coroutine, owner_offset)                                               \
+  FIELD(Coroutine, index_offset)                                               \
+  FIELD(Coroutine, caller_offset)                                              \
   FIELD(String, hash_offset)                                                   \
   FIELD(String, length_offset)                                                 \
   FIELD(SubtypeTestCache, cache_offset)                                        \
@@ -402,24 +406,6 @@
   FIELD(WeakProperty, value_offset)                                            \
   FIELD(WeakReference, target_offset)                                          \
   FIELD(WeakReference, type_arguments_offset)                                  \
-  FIELD(Coroutine, name_offset)                                                \
-  FIELD(Coroutine, entry_offset)                                               \
-  FIELD(Coroutine, trampoline_offset)                                          \
-  FIELD(Coroutine, argument_offset)                                            \
-  FIELD(Coroutine, attributes_offset)                                          \
-  FIELD(Coroutine, caller_offset)                                              \
-  FIELD(Coroutine, scheduler_offset)                                           \
-  FIELD(Coroutine, processor_offset)                                           \
-  FIELD(Coroutine, to_processor_next_offset)                                   \
-  FIELD(Coroutine, to_processor_previous_offset)                               \
-  FIELD(Coroutine, to_state_offset)                                            \
-  FIELD(Coroutine, index_offset)                                               \
-  FIELD(Coroutine, stack_size_offset)                                          \
-  FIELD(Coroutine, native_stack_base_offset)                                   \
-  FIELD(Coroutine, stack_root_offset)                                          \
-  FIELD(Coroutine, stack_base_offset)                                          \
-  FIELD(Coroutine, stack_limit_offset)                                         \
-  FIELD(Coroutine, overflow_stack_limit_offset)                                \
   RANGE(Code, entry_point_offset, CodeEntryKind, CodeEntryKind::kNormal,       \
         CodeEntryKind::kMonomorphicUnchecked,                                  \
         [](CodeEntryKind value) { return true; })                              \
@@ -489,7 +475,6 @@
   SIZEOF(SingleTargetCache, InstanceSize, UntaggedSingleTargetCache)           \
   SIZEOF(StackTrace, InstanceSize, UntaggedStackTrace)                         \
   SIZEOF(SuspendState, HeaderSize, UntaggedSuspendState)                       \
-  SIZEOF(Coroutine, InstanceSize, UntaggedCoroutine)                           \
   SIZEOF(String, InstanceSize, UntaggedString)                                 \
   SIZEOF(SubtypeTestCache, InstanceSize, UntaggedSubtypeTestCache)             \
   SIZEOF(LoadingUnit, InstanceSize, UntaggedLoadingUnit)                       \

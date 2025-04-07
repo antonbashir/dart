@@ -362,15 +362,6 @@ void GCCompactor::Compact(Page* pages, FreeList* freelist, Mutex* pages_lock) {
       suspend_state->untag()->VisitPointers(this);
     }
   }
-  {
-    TIMELINE_FUNCTION_GC_DURATION(thread(),
-                                  "ForwardPostponedCoroutinePointers");
-    can_visit_coroutines_ = true;
-    const intptr_t length = postponed_coroutines_.length();
-    for (intptr_t i = 0; i < length; ++i) {
-      postponed_coroutines_[i]->untag()->VisitPointers(this);
-    }
-  }
 
   heap_->old_space()->VisitRoots(this);
 
@@ -834,15 +825,6 @@ bool GCCompactor::CanVisitSuspendStatePointers(SuspendStatePtr suspend_state) {
     // stage of compaction.
     MutexLocker ml(&postponed_suspend_states_mutex_);
     postponed_suspend_states_.Add(suspend_state);
-    return false;
-  }
-  return true;
-}
-
-bool GCCompactor::CanVisitCoroutinePointers(CoroutinePtr coroutine) {
-  if (!can_visit_coroutines_) {
-    MutexLocker ml(&postponed_coroutines_mutex_);
-    postponed_coroutines_.Add(coroutine);
     return false;
   }
   return true;

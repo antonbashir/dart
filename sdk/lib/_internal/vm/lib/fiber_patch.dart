@@ -1,149 +1,81 @@
-import "dart:_internal" show patch;
 import "dart:fiber";
+import "dart:_internal" show patch;
 
 @patch
-@pragma("vm:entry-point")
-class _Coroutine {
-  @patch
-  @pragma("vm:external-name", "Coroutine_factory")
-  external factory _Coroutine._(int size, Function trampoline);
+@pragma("vm:external-name", "Coroutine_create")
+external _Coroutine? Coroutine_create(int size, int ownerIndex, Object owner, int attributes, Function trampoline);
 
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external String get _name;
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external set _name(String value);
+@patch
+@pragma("vm:recognized", "other")
+@pragma("vm:never-inline")
+@pragma("vm:unsafe:no-interrupts")
+@pragma("vm:unsafe:no-bounds-checks")
+external void Coroutine_initialize(_Coroutine root);
 
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external int get _index;
+@patch
+@pragma("vm:recognized", "other")
+@pragma("vm:never-inline")
+@pragma("vm:unsafe:no-interrupts")
+@pragma("vm:unsafe:no-bounds-checks")
+external void Coroutine_transfer(_Coroutine from, _Coroutine to);
 
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external int get _size;
+@patch
+@pragma("vm:recognized", "other")
+@pragma("vm:never-inline")
+@pragma("vm:unsafe:no-interrupts")
+@pragma("vm:unsafe:no-bounds-checks")
+external void Coroutine_fork(_Coroutine from, _Coroutine to);
 
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external void Function() get _entry;
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external set _entry(void Function() value);
+@patch
+@pragma("vm:recognized", "other")
+@pragma("vm:prefer-inline")
+@pragma("vm:idempotent")
+@pragma("vm:unsafe:no-interrupts")
+@pragma("vm:unsafe:no-bounds-checks")
+external _Coroutine? Coroutine_current();
 
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external void Function() get _trampoline;
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external set _trampoline(void Function() value);
+@patch
+@pragma("vm:recognized", "other")
+@pragma("vm:prefer-inline")
+@pragma("vm:idempotent")
+@pragma("vm:unsafe:no-interrupts")
+@pragma("vm:unsafe:no-bounds-checks")
+external int Coroutine_getIndex(_Coroutine coroutine);
 
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external Object? get _argument;
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external set _argument(Object? value);
+@patch
+@pragma("vm:recognized", "other")
+@pragma("vm:prefer-inline")
+@pragma("vm:idempotent")
+@pragma("vm:unsafe:no-interrupts")
+@pragma("vm:unsafe:no-bounds-checks")
+external int Coroutine_getAttributes(_Coroutine coroutine);
 
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external int get _attributes;
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external set _attributes(int value);
+@patch
+@pragma("vm:recognized", "other")
+@pragma("vm:prefer-inline")
+@pragma("vm:unsafe:no-interrupts")
+@pragma("vm:unsafe:no-bounds-checks")
+external void Coroutine_setAttributes(_Coroutine coroutine, int attributes);
 
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external _Coroutine get _caller;
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external set _caller(_Coroutine value);
+@patch
+@pragma("vm:recognized", "other")
+@pragma("vm:prefer-inline")
+@pragma("vm:idempotent")
+@pragma("vm:unsafe:no-interrupts")
+@pragma("vm:unsafe:no-bounds-checks")
+external _Coroutine? Coroutine_getCaller(_Coroutine coroutine);
 
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external _Coroutine get _scheduler;
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external set _scheduler(_Coroutine value);
+@patch
+@pragma("vm:recognized", "other")
+@pragma("vm:prefer-inline")
+@pragma("vm:unsafe:no-interrupts")
+@pragma("vm:unsafe:no-bounds-checks")
+external void Coroutine_setCaller(_Coroutine coroutine, _Coroutine caller);
 
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external _FiberProcessor get _processor;
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external set _processor(_FiberProcessor value);
-
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external _Coroutine get _toProcessorNext;
-
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external set _toProcessorNext(_Coroutine value);
-
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external _Coroutine get _toProcessorPrevious;
-
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  external set _toProcessorPrevious(_Coroutine value);
-
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:never-inline")
-  @pragma("vm:unsafe:no-interrupts")
-  @pragma("vm:unsafe:no-bounds-checks")
-  external static void _initialize(_Coroutine root);
-
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:never-inline")
-  @pragma("vm:unsafe:no-interrupts")
-  @pragma("vm:unsafe:no-bounds-checks")
-  external static void _transfer(_Coroutine from, _Coroutine to);
-
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:never-inline")
-  @pragma("vm:unsafe:no-interrupts")
-  @pragma("vm:unsafe:no-bounds-checks")
-  external static void _fork(_Coroutine from, _Coroutine to);
-
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  @pragma("vm:idempotent")
-  @pragma("vm:unsafe:no-interrupts")
-  @pragma("vm:unsafe:no-bounds-checks")
-  external static _Coroutine? get _current;
-
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:prefer-inline")
-  @pragma("vm:idempotent")
-  @pragma("vm:unsafe:no-interrupts")
-  @pragma("vm:unsafe:no-bounds-checks")
-  external static List<_Coroutine> get _registry;
-}
+@patch
+@pragma("vm:recognized", "other")
+@pragma("vm:prefer-inline")
+@pragma("vm:idempotent")
+@pragma("vm:unsafe:no-interrupts")
+@pragma("vm:unsafe:no-bounds-checks")
+external int Coroutine_getOwner(_Coroutine coroutine);

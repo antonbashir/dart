@@ -5,8 +5,6 @@
 #ifndef RUNTIME_VM_ISOLATE_H_
 #define RUNTIME_VM_ISOLATE_H_
 
-#include "vm/compiler/runtime_api.h"
-#include "vm/tagged_pointer.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
@@ -20,6 +18,7 @@
 #include "platform/atomic.h"
 #include "vm/base_isolate.h"
 #include "vm/class_table.h"
+#include "vm/compiler/runtime_api.h"
 #include "vm/dispatch_table.h"
 #include "vm/exceptions.h"
 #include "vm/ffi_callback_metadata.h"
@@ -33,13 +32,13 @@
 #include "vm/metrics.h"
 #include "vm/os_thread.h"
 #include "vm/random.h"
+#include "vm/tagged_pointer.h"
 #include "vm/tags.h"
 #include "vm/thread.h"
 #include "vm/thread_pool.h"
 #include "vm/thread_stack_resource.h"
 #include "vm/token_position.h"
 #include "vm/virtual_memory.h"
-#include "vm/coroutine.h"
 
 namespace dart {
 
@@ -89,7 +88,6 @@ class StubCode;
 class ThreadRegistry;
 class UserTag;
 class WeakTable;
-class CoroutineLink;
 
 class IsolateVisitor {
  public:
@@ -120,7 +118,8 @@ class Callable : public ValueObject {
 template <typename T>
 class LambdaCallable : public Callable {
  public:
-  explicit LambdaCallable(T& lambda) : lambda_(lambda) {}
+  explicit LambdaCallable(T& lambda)
+      : lambda_(lambda) {}
   void Call() { lambda_(); }
 
  private:
@@ -137,26 +136,26 @@ typedef FixedCache<intptr_t, CatchEntryMovesRefPtr, 16> CatchEntryMovesCache;
 //
 //     V(when, name, bit-name, Dart_IsolateFlags-name, command-line-flag-name)
 //
-#define BOOL_ISOLATE_GROUP_FLAG_LIST(V)                                        \
-  V(PRECOMPILER, obfuscate, Obfuscate, obfuscate, false)                       \
-  V(NONPRODUCT, asserts, EnableAsserts, enable_asserts, FLAG_enable_asserts)   \
-  V(NONPRODUCT, use_field_guards, UseFieldGuards, use_field_guards,            \
-    FLAG_use_field_guards)                                                     \
-  V(PRODUCT, should_load_vmservice_library, ShouldLoadVmService,               \
-    load_vmservice_library, false)                                             \
-  V(NONPRODUCT, use_osr, UseOsr, use_osr, FLAG_use_osr)                        \
-  V(NONPRODUCT, snapshot_is_dontneed_safe, SnapshotIsDontNeedSafe,             \
-    snapshot_is_dontneed_safe, false)                                          \
-  V(NONPRODUCT, branch_coverage, BranchCoverage, branch_coverage,              \
-    FLAG_branch_coverage)                                                      \
+#define BOOL_ISOLATE_GROUP_FLAG_LIST(V)                                      \
+  V(PRECOMPILER, obfuscate, Obfuscate, obfuscate, false)                     \
+  V(NONPRODUCT, asserts, EnableAsserts, enable_asserts, FLAG_enable_asserts) \
+  V(NONPRODUCT, use_field_guards, UseFieldGuards, use_field_guards,          \
+    FLAG_use_field_guards)                                                   \
+  V(PRODUCT, should_load_vmservice_library, ShouldLoadVmService,             \
+    load_vmservice_library, false)                                           \
+  V(NONPRODUCT, use_osr, UseOsr, use_osr, FLAG_use_osr)                      \
+  V(NONPRODUCT, snapshot_is_dontneed_safe, SnapshotIsDontNeedSafe,           \
+    snapshot_is_dontneed_safe, false)                                        \
+  V(NONPRODUCT, branch_coverage, BranchCoverage, branch_coverage,            \
+    FLAG_branch_coverage)                                                    \
   V(NONPRODUCT, coverage, Coverage, coverage, FLAG_coverage)
 
 // List of Isolate flags with corresponding members of Dart_IsolateFlags and
 // corresponding global command line flags.
-#define BOOL_ISOLATE_FLAG_LIST(V)                                              \
-  V(NONPRODUCT, is_system_isolate, IsSystemIsolate, is_system_isolate, false)  \
-  V(NONPRODUCT, is_service_isolate, IsServiceIsolate, is_service_isolate,      \
-    false)                                                                     \
+#define BOOL_ISOLATE_FLAG_LIST(V)                                             \
+  V(NONPRODUCT, is_system_isolate, IsSystemIsolate, is_system_isolate, false) \
+  V(NONPRODUCT, is_service_isolate, IsServiceIsolate, is_service_isolate,     \
+    false)                                                                    \
   V(NONPRODUCT, is_kernel_isolate, IsKernelIsolate, is_kernel_isolate, false)
 
 // Represents the information used for spawning the first isolate within an
@@ -341,7 +340,7 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   void SetupImagePage(const uint8_t* snapshot_buffer, bool is_executable);
   void Shutdown();
 
-#define ISOLATE_METRIC_ACCESSOR(type, variable, name, unit)                    \
+#define ISOLATE_METRIC_ACCESSOR(type, variable, name, unit) \
   type* Get##variable##Metric() { return &metric_##variable##_; }
   ISOLATE_GROUP_METRIC_LIST(ISOLATE_METRIC_ACCESSOR);
 #undef ISOLATE_METRIC_ACCESSOR
@@ -435,10 +434,10 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
 
 #define FLAG_FOR_PRODUCT(from_field, from_flag) (from_field)
 
-#define DECLARE_GETTER(when, name, bitname, isolate_flag_name, flag_name)      \
-  bool name() const {                                                          \
-    return FLAG_FOR_##when(bitname##Bit::decode(isolate_group_flags_),         \
-                           flag_name);                                         \
+#define DECLARE_GETTER(when, name, bitname, isolate_flag_name, flag_name) \
+  bool name() const {                                                     \
+    return FLAG_FOR_##when(bitname##Bit::decode(isolate_group_flags_),    \
+                           flag_name);                                    \
   }
   BOOL_ISOLATE_GROUP_FLAG_LIST(DECLARE_GETTER)
 #undef FLAG_FOR_NONPRODUCT
@@ -529,6 +528,7 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
     return &kernel_data_class_cache_mutex_;
   }
   Mutex* kernel_constants_mutex() { return &kernel_constants_mutex_; }
+  Mutex* coroutine_mutex() { return &symbols_mutex_; }
 
 #if defined(DART_PRECOMPILED_RUNTIME)
   Mutex* unlinked_call_map_mutex() { return &unlinked_call_map_mutex_; }
@@ -793,18 +793,18 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   // For `object_store_shared_untag()`, `class_table_shared_untag()`
   friend class Isolate;
 
-#define ISOLATE_GROUP_FLAG_BITS(V)                                             \
-  V(AllClassesFinalized)                                                       \
-  V(EnableAsserts)                                                             \
-  V(HasAttemptedReload)                                                        \
-  V(RemappingCids)                                                             \
-  V(ShouldLoadVmService)                                                       \
-  V(Obfuscate)                                                                 \
-  V(UseFieldGuards)                                                            \
-  V(UseOsr)                                                                    \
-  V(SnapshotIsDontNeedSafe)                                                    \
-  V(BranchCoverage)                                                            \
-  V(Coverage)                                                                  \
+#define ISOLATE_GROUP_FLAG_BITS(V) \
+  V(AllClassesFinalized)           \
+  V(EnableAsserts)                 \
+  V(HasAttemptedReload)            \
+  V(RemappingCids)                 \
+  V(ShouldLoadVmService)           \
+  V(Obfuscate)                     \
+  V(UseFieldGuards)                \
+  V(UseOsr)                        \
+  V(SnapshotIsDontNeedSafe)        \
+  V(BranchCoverage)                \
+  V(Coverage)                      \
   V(HasDynamicallyExtendableClasses)
 
   // Isolate group specific flags.
@@ -814,7 +814,7 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
 #undef DECLARE_BIT
   };
 
-#define DECLARE_BITFIELD(Name)                                                 \
+#define DECLARE_BITFIELD(Name) \
   class Name##Bit : public BitField<uint32_t, bool, k##Name##Bit, 1> {};
   ISOLATE_GROUP_FLAG_BITS(DECLARE_BITFIELD)
 #undef DECLARE_BITFIELD
@@ -856,7 +856,7 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
 #endif
   Become* become_ = nullptr;
 
-#define ISOLATE_METRIC_VARIABLE(type, variable, name, unit)                    \
+#define ISOLATE_METRIC_VARIABLE(type, variable, name, unit) \
   type metric_##variable##_;
   ISOLATE_GROUP_METRIC_LIST(ISOLATE_METRIC_VARIABLE);
 #undef ISOLATE_METRIC_VARIABLE
@@ -906,6 +906,7 @@ class IsolateGroup : public IntrusiveDListEntry<IsolateGroup> {
   Mutex kernel_data_lib_cache_mutex_;
   Mutex kernel_data_class_cache_mutex_;
   Mutex kernel_constants_mutex_;
+  Mutex coroutine_mutex_;
 
 #if defined(DART_PRECOMPILED_RUNTIME)
   Mutex unlinked_call_map_mutex_;
@@ -973,10 +974,10 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
     kErrorFatalMsg = 9,
 
     // Internal message ids.
-    kInterruptMsg = 10,     // Break in the debugger.
-    kInternalKillMsg = 11,  // Like kill, but does not run exit listeners, etc.
+    kInterruptMsg = 10,               // Break in the debugger.
+    kInternalKillMsg = 11,            // Like kill, but does not run exit listeners, etc.
     kDrainServiceExtensionsMsg = 12,  // Invoke pending service extensions
-    kCheckForReload = 13,  // Participate in other isolate group reload.
+    kCheckForReload = 13,             // Participate in other isolate group reload.
   };
   // The different Isolate API message priorities for ping and kill messages.
   enum LibMsgPriority {
@@ -1009,14 +1010,12 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   }
 
   bool HasCoroutine() const;
-  CoroutinePtr RestoreCoroutine();
-  void SaveCoroutine(CoroutinePtr coroutine) { saved_coroutine_ = coroutine; }
+  Coroutine* RestoreCoroutine();
+  void SaveCoroutine(Coroutine* coroutine) { saved_coroutine_ = coroutine; }
 
-  CoroutineLink* finished_coroutines() { return &finished_coroutines_; }
-  CoroutineLink* active_coroutines() { return &active_coroutines_; }
-  
-  GrowableObjectArrayPtr coroutines_registry() { return coroutines_registry_; }
-  void set_coroutines_registry(GrowableObjectArrayPtr coroutines) { coroutines_registry_ = coroutines; }
+  MallocGrowableArray<Coroutine*>& coroutines_registry() { return coroutines_registry_; }
+  void set_coroutines_registry(MallocGrowableArray<Coroutine*>& coroutines) { coroutines_registry_ = std::move(coroutines); }
+  void set_coroutines_registry(MallocGrowableArray<Coroutine*>&& coroutines) { coroutines_registry_ = std::move(coroutines); }
   static intptr_t coroutines_registry_offset() {
     return OFFSET_OF(Isolate, coroutines_registry_);
   }
@@ -1351,7 +1350,7 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   }
 
 #if !defined(PRODUCT)
-#define ISOLATE_METRIC_ACCESSOR(type, variable, name, unit)                    \
+#define ISOLATE_METRIC_ACCESSOR(type, variable, name, unit) \
   type* Get##variable##Metric() { return &metric_##variable##_; }
   ISOLATE_METRIC_LIST(ISOLATE_METRIC_ACCESSOR);
 #undef ISOLATE_METRIC_ACCESSOR
@@ -1425,9 +1424,9 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
 
 #define FLAG_FOR_PRODUCT(from_field, from_flag) (from_field)
 
-#define DECLARE_GETTER(when, name, bitname, isolate_flag_name, flag_name)      \
-  bool name() const {                                                          \
-    return FLAG_FOR_##when(LoadIsolateFlagsBit<bitname##Bit>(), flag_name);    \
+#define DECLARE_GETTER(when, name, bitname, isolate_flag_name, flag_name)   \
+  bool name() const {                                                       \
+    return FLAG_FOR_##when(LoadIsolateFlagsBit<bitname##Bit>(), flag_name); \
   }
   BOOL_ISOLATE_FLAG_LIST(DECLARE_GETTER)
 #undef FLAG_FOR_NONPRODUCT
@@ -1578,25 +1577,23 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   bool has_resumption_breakpoints_ = false;
   bool is_system_isolate_ = false;
   std::unique_ptr<IsolateObjectStore> isolate_object_store_;
-  GrowableObjectArrayPtr coroutines_registry_;
+  MallocGrowableArray<Coroutine*> coroutines_registry_;
   // End accessed from generated code.
 
   IsolateGroup* const isolate_group_;
   IdleTimeHandler idle_time_handler_;
-  CoroutinePtr saved_coroutine_;
-  CoroutineLink active_coroutines_;
-  CoroutineLink finished_coroutines_;
+  Coroutine* saved_coroutine_;
 
-#define ISOLATE_FLAG_BITS(V)                                                   \
-  V(ErrorsFatal)                                                               \
-  V(IsRunnable)                                                                \
-  V(IsVMIsolate)                                                               \
-  V(IsServiceIsolate)                                                          \
-  V(IsKernelIsolate)                                                           \
-  V(ResumeRequest)                                                             \
-  V(HasAttemptedStepping)                                                      \
-  V(ShouldPausePostServiceRequest)                                             \
-  V(IsSystemIsolate)                                                           \
+#define ISOLATE_FLAG_BITS(V)       \
+  V(ErrorsFatal)                   \
+  V(IsRunnable)                    \
+  V(IsVMIsolate)                   \
+  V(IsServiceIsolate)              \
+  V(IsKernelIsolate)               \
+  V(ResumeRequest)                 \
+  V(HasAttemptedStepping)          \
+  V(ShouldPausePostServiceRequest) \
+  V(IsSystemIsolate)               \
   V(IsServiceRegistered)
 
   // Isolate specific flags.
@@ -1606,7 +1603,7 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
 #undef DECLARE_BIT
   };
 
-#define DECLARE_BITFIELD(Name)                                                 \
+#define DECLARE_BITFIELD(Name) \
   class Name##Bit : public BitField<uint32_t, bool, k##Name##Bit, 1> {};
   ISOLATE_FLAG_BITS(DECLARE_BITFIELD)
 #undef DECLARE_BITFIELD
@@ -1642,29 +1639,27 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   VMTagCounters vm_tag_counters_;
 
   // We use 6 list entries for each pending service extension calls.
-	  enum {
-    kPendingHandlerIndex = 0,
-    kPendingMethodNameIndex,
-    kPendingKeysIndex,
-    kPendingValuesIndex,
-    kPendingReplyPortIndex,
-    kPendingIdIndex,
-    kPendingEntrySize
-  };
+  enum {
+      kPendingHandlerIndex = 0,
+      kPendingMethodNameIndex,
+      kPendingKeysIndex,
+      kPendingValuesIndex,
+      kPendingReplyPortIndex,
+      kPendingIdIndex,
+      kPendingEntrySize};
   GrowableObjectArrayPtr pending_service_extension_calls_;
 
   // We use 2 list entries for each registered extension handler.
   enum {
-    kRegisteredNameIndex = 0,
-    kRegisteredHandlerIndex,
-    kRegisteredEntrySize
-  };
+      kRegisteredNameIndex = 0,
+      kRegisteredHandlerIndex,
+      kRegisteredEntrySize};
   GrowableObjectArrayPtr registered_service_extension_handlers_;
 
   // Used to wake the isolate when it is in the pause event loop.
   Monitor* pause_loop_monitor_ = nullptr;
 
-#define ISOLATE_METRIC_VARIABLE(type, variable, name, unit)                    \
+#define ISOLATE_METRIC_VARIABLE(type, variable, name, unit) \
   type metric_##variable##_;
   ISOLATE_METRIC_LIST(ISOLATE_METRIC_VARIABLE);
 #undef ISOLATE_METRIC_VARIABLE
@@ -1695,7 +1690,6 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
   DeoptContext* deopt_context_ = nullptr;
   FfiCallbackMetadata::Metadata* ffi_callback_list_head_ = nullptr;
   intptr_t ffi_callback_keep_alive_counter_ = 0;
-
 
   GrowableObjectArrayPtr tag_table_;
 
@@ -1762,7 +1756,7 @@ class Isolate : public BaseIsolate, public IntrusiveDListEntry<Isolate> {
 
   MallocGrowableArray<ObjectPtr> pointers_to_verify_at_exit_;
 
-#define REUSABLE_FRIEND_DECLARATION(name)                                      \
+#define REUSABLE_FRIEND_DECLARATION(name) \
   friend class Reusable##name##HandleScope;
   REUSABLE_HANDLE_LIST(REUSABLE_FRIEND_DECLARATION)
 #undef REUSABLE_FRIEND_DECLARATION
@@ -1849,7 +1843,8 @@ class EnterIsolateGroupScope {
 // operate on an individual isolate.
 class NoActiveIsolateScope : public StackResource {
  public:
-  NoActiveIsolateScope() : NoActiveIsolateScope(Thread::Current()) {}
+  NoActiveIsolateScope()
+      : NoActiveIsolateScope(Thread::Current()) {}
   explicit NoActiveIsolateScope(Thread* thread)
       : StackResource(thread), thread_(thread) {
     outer_ = thread_->no_active_isolate_scope_;

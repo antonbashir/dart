@@ -11487,7 +11487,7 @@ class CoroutineInitializeInstr : public TemplateDefinition<1, Throws> {
   Value* root() const { return inputs_[0]; }
   virtual bool CanCallDart() const { return true; }
   virtual bool ComputeCanDeoptimize() const { return false; }
-  virtual bool ComputeCanDeoptimizeAfterCall() const { return !CompilerState::Current().is_aot(); }
+  virtual bool ComputeCanDeoptimizeAfterCall() const { return true; }
   virtual bool HasUnknownSideEffects() const { return true; }
   virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
     return InputCount();
@@ -11516,7 +11516,7 @@ class CoroutineTransferInstr : public TemplateDefinition<2, Throws> {
 
   virtual bool CanCallDart() const { return true; }
   virtual bool ComputeCanDeoptimize() const { return false; }
-  virtual bool ComputeCanDeoptimizeAfterCall() const { return !CompilerState::Current().is_aot(); }
+  virtual bool ComputeCanDeoptimizeAfterCall() const { return true; }
   virtual bool HasUnknownSideEffects() const { return true; }
   virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
     return InputCount();
@@ -11545,7 +11545,7 @@ class CoroutineForkInstr : public TemplateDefinition<2, Throws> {
 
   virtual bool CanCallDart() const { return true; }
   virtual bool ComputeCanDeoptimize() const { return false; }
-  virtual bool ComputeCanDeoptimizeAfterCall() const { return !CompilerState::Current().is_aot(); }
+  virtual bool ComputeCanDeoptimizeAfterCall() const { return true; }
   virtual bool HasUnknownSideEffects() const { return true; }
   virtual intptr_t NumberOfInputsConsumedBeforeCall() const {
     return InputCount();

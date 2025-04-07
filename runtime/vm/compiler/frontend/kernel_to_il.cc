@@ -897,72 +897,54 @@ const Function& TypedListGetNativeFunction(Thread* thread, classid_t cid) {
   }
 }
 
-#define LOAD_NATIVE_FIELD(V)                                           \
-  V(ByteDataViewLength, TypedDataBase_length)                          \
-  V(ByteDataViewOffsetInBytes, TypedDataView_offset_in_bytes)          \
-  V(ByteDataViewTypedData, TypedDataView_typed_data)                   \
-  V(Finalizer_getCallback, Finalizer_callback)                         \
-  V(FinalizerBase_getAllEntries, FinalizerBase_all_entries)            \
-  V(FinalizerBase_getDetachments, FinalizerBase_detachments)           \
-  V(FinalizerEntry_getDetach, FinalizerEntry_detach)                   \
-  V(FinalizerEntry_getNext, FinalizerEntry_next)                       \
-  V(FinalizerEntry_getToken, FinalizerEntry_token)                     \
-  V(FinalizerEntry_getValue, FinalizerEntry_value)                     \
-  V(NativeFinalizer_getCallback, NativeFinalizer_callback)             \
-  V(GrowableArrayLength, GrowableObjectArray_length)                   \
-  V(ReceivePort_getSendPort, ReceivePort_send_port)                    \
-  V(ReceivePort_getHandler, ReceivePort_handler)                       \
-  V(ImmutableLinkedHashBase_getData, ImmutableLinkedHashBase_data)     \
-  V(ImmutableLinkedHashBase_getIndex, ImmutableLinkedHashBase_index)   \
-  V(LinkedHashBase_getData, LinkedHashBase_data)                       \
-  V(LinkedHashBase_getDeletedKeys, LinkedHashBase_deleted_keys)        \
-  V(LinkedHashBase_getHashMask, LinkedHashBase_hash_mask)              \
-  V(LinkedHashBase_getIndex, LinkedHashBase_index)                     \
-  V(LinkedHashBase_getUsedData, LinkedHashBase_used_data)              \
-  V(ObjectArrayLength, Array_length)                                   \
-  V(Record_shape, Record_shape)                                        \
-  V(SuspendState_getFunctionData, SuspendState_function_data)          \
-  V(Coroutine_getName, Coroutine_name)                                 \
-  V(Coroutine_getEntry, Coroutine_entry)                               \
-  V(Coroutine_getTrampoline, Coroutine_trampoline)                     \
-  V(Coroutine_getArgument, Coroutine_argument)                        \
-  V(Coroutine_getCaller, Coroutine_caller)                             \
-  V(Coroutine_getScheduler, Coroutine_scheduler)                       \
-  V(Coroutine_getProcessor, Coroutine_processor)                       \
-  V(Coroutine_getToProcessorNext, Coroutine_to_processor_next)         \
-  V(Coroutine_getToProcessorPrevious, Coroutine_to_processor_previous) \
-  V(SuspendState_getThenCallback, SuspendState_then_callback)          \
-  V(SuspendState_getErrorCallback, SuspendState_error_callback)        \
-  V(TypedDataViewOffsetInBytes, TypedDataView_offset_in_bytes)         \
-  V(TypedDataViewTypedData, TypedDataView_typed_data)                  \
-  V(TypedListBaseLength, TypedDataBase_length)                         \
-  V(WeakProperty_getKey, WeakProperty_key)                             \
-  V(WeakProperty_getValue, WeakProperty_value)                         \
+#define LOAD_NATIVE_FIELD(V)                                         \
+  V(ByteDataViewLength, TypedDataBase_length)                        \
+  V(ByteDataViewOffsetInBytes, TypedDataView_offset_in_bytes)        \
+  V(ByteDataViewTypedData, TypedDataView_typed_data)                 \
+  V(Finalizer_getCallback, Finalizer_callback)                       \
+  V(FinalizerBase_getAllEntries, FinalizerBase_all_entries)          \
+  V(FinalizerBase_getDetachments, FinalizerBase_detachments)         \
+  V(FinalizerEntry_getDetach, FinalizerEntry_detach)                 \
+  V(FinalizerEntry_getNext, FinalizerEntry_next)                     \
+  V(FinalizerEntry_getToken, FinalizerEntry_token)                   \
+  V(FinalizerEntry_getValue, FinalizerEntry_value)                   \
+  V(NativeFinalizer_getCallback, NativeFinalizer_callback)           \
+  V(GrowableArrayLength, GrowableObjectArray_length)                 \
+  V(ReceivePort_getSendPort, ReceivePort_send_port)                  \
+  V(ReceivePort_getHandler, ReceivePort_handler)                     \
+  V(ImmutableLinkedHashBase_getData, ImmutableLinkedHashBase_data)   \
+  V(ImmutableLinkedHashBase_getIndex, ImmutableLinkedHashBase_index) \
+  V(LinkedHashBase_getData, LinkedHashBase_data)                     \
+  V(LinkedHashBase_getDeletedKeys, LinkedHashBase_deleted_keys)      \
+  V(LinkedHashBase_getHashMask, LinkedHashBase_hash_mask)            \
+  V(LinkedHashBase_getIndex, LinkedHashBase_index)                   \
+  V(LinkedHashBase_getUsedData, LinkedHashBase_used_data)            \
+  V(ObjectArrayLength, Array_length)                                 \
+  V(Record_shape, Record_shape)                                      \
+  V(SuspendState_getFunctionData, SuspendState_function_data)        \
+  V(SuspendState_getThenCallback, SuspendState_then_callback)        \
+  V(SuspendState_getErrorCallback, SuspendState_error_callback)      \
+  V(TypedDataViewOffsetInBytes, TypedDataView_offset_in_bytes)       \
+  V(TypedDataViewTypedData, TypedDataView_typed_data)                \
+  V(TypedListBaseLength, TypedDataBase_length)                       \
+  V(WeakProperty_getKey, WeakProperty_key)                           \
+  V(WeakProperty_getValue, WeakProperty_value)                       \
   V(WeakReference_getTarget, WeakReference_target)
 
-#define STORE_NATIVE_FIELD(V)                                          \
-  V(Finalizer_setCallback, Finalizer_callback)                         \
-  V(FinalizerBase_setAllEntries, FinalizerBase_all_entries)            \
-  V(FinalizerBase_setDetachments, FinalizerBase_detachments)           \
-  V(FinalizerEntry_setToken, FinalizerEntry_token)                     \
-  V(NativeFinalizer_setCallback, NativeFinalizer_callback)             \
-  V(ReceivePort_setHandler, ReceivePort_handler)                       \
-  V(LinkedHashBase_setData, LinkedHashBase_data)                       \
-  V(LinkedHashBase_setIndex, LinkedHashBase_index)                     \
-  V(SuspendState_setFunctionData, SuspendState_function_data)          \
-  V(SuspendState_setThenCallback, SuspendState_then_callback)          \
-  V(SuspendState_setErrorCallback, SuspendState_error_callback)        \
-  V(Coroutine_setName, Coroutine_name)                                 \
-  V(Coroutine_setEntry, Coroutine_entry)                               \
-  V(Coroutine_setTrampoline, Coroutine_trampoline)                     \
-  V(Coroutine_setArgument, Coroutine_argument)                         \
-  V(Coroutine_setCaller, Coroutine_caller)                             \
-  V(Coroutine_setScheduler, Coroutine_scheduler)                       \
-  V(Coroutine_setProcessor, Coroutine_processor)                       \
-  V(Coroutine_setToProcessorNext, Coroutine_to_processor_next)         \
-  V(Coroutine_setToProcessorPrevious, Coroutine_to_processor_previous) \
-  V(WeakProperty_setKey, WeakProperty_key)                             \
-  V(WeakProperty_setValue, WeakProperty_value)                         \
+#define STORE_NATIVE_FIELD(V)                                   \
+  V(Finalizer_setCallback, Finalizer_callback)                  \
+  V(FinalizerBase_setAllEntries, FinalizerBase_all_entries)     \
+  V(FinalizerBase_setDetachments, FinalizerBase_detachments)    \
+  V(FinalizerEntry_setToken, FinalizerEntry_token)              \
+  V(NativeFinalizer_setCallback, NativeFinalizer_callback)      \
+  V(ReceivePort_setHandler, ReceivePort_handler)                \
+  V(LinkedHashBase_setData, LinkedHashBase_data)                \
+  V(LinkedHashBase_setIndex, LinkedHashBase_index)              \
+  V(SuspendState_setFunctionData, SuspendState_function_data)   \
+  V(SuspendState_setThenCallback, SuspendState_then_callback)   \
+  V(SuspendState_setErrorCallback, SuspendState_error_callback) \
+  V(WeakProperty_setKey, WeakProperty_key)                      \
+  V(WeakProperty_setValue, WeakProperty_value)                  \
   V(WeakReference_setTarget, WeakReference_target)
 
 #define STORE_NATIVE_FIELD_NO_BARRIER(V)                        \
@@ -1160,12 +1142,13 @@ bool FlowGraphBuilder::IsRecognizedMethodForFlowGraph(
     case MethodRecognizer::kCoroutineFork:
     case MethodRecognizer::kCoroutineInitialize:
     case MethodRecognizer::kCoroutineTransfer:
-    case MethodRecognizer::kCoroutine_getCurrent:
-    case MethodRecognizer::kCoroutine_getRegistry:
+    case MethodRecognizer::kCoroutine_getOwner:
+    case MethodRecognizer::kCoroutine_current:
+    case MethodRecognizer::kCoroutine_getIndex:
     case MethodRecognizer::kCoroutine_getAttributes:
     case MethodRecognizer::kCoroutine_setAttributes:
-    case MethodRecognizer::kCoroutine_getIndex:
-    case MethodRecognizer::kCoroutine_getSize:
+    case MethodRecognizer::kCoroutine_getCaller:
+    case MethodRecognizer::kCoroutine_setCaller:
       return true;
     default:
       return false;
@@ -1958,39 +1941,62 @@ FlowGraph* FlowGraphBuilder::BuildGraphOfRecognizedMethod(
       body += NullConstant();
       break;
     }
-    case MethodRecognizer::kCoroutine_getCurrent: {
+    case MethodRecognizer::kCoroutine_current: {
       body += LoadThread();
-      body += LoadNativeField(Slot::Thread_coroutine());
-      break;
-    }
-    case MethodRecognizer::kCoroutine_getRegistry: {
-      body += LoadIsolate();
-      body += LoadNativeField(Slot::Isolate_coroutines_registry());
+      body += LoadUntagged(compiler::target::Thread::coroutine_offset());
+      body += ConvertUntaggedToUnboxed();
+      body += Box(kUnboxedInt64);
       break;
     }
     case MethodRecognizer::kCoroutine_getIndex: {
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += UnboxTruncate(kUnboxedAddress);
+      body += ConvertUnboxedToUntagged();
       body += LoadNativeField(Slot::Coroutine_index());
+      body += Box(kUnboxedInt64);
+      break;
+    }
+    case MethodRecognizer::kCoroutine_getOwner: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += UnboxTruncate(kUnboxedAddress);
+      body += ConvertUnboxedToUntagged();
+      body += LoadNativeField(Slot::Coroutine_owner());
       body += Box(kUnboxedInt64);
       break;
     }
     case MethodRecognizer::kCoroutine_getAttributes: {
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += UnboxTruncate(kUnboxedAddress);
+      body += ConvertUnboxedToUntagged();
       body += LoadNativeField(Slot::Coroutine_attributes());
-      body += Box(kUnboxedInt64);
-      break;
-    }
-    case MethodRecognizer::kCoroutine_getSize: {
-      body += LoadLocal(parsed_function_->RawParameterVariable(0));
-      body += LoadNativeField(Slot::Coroutine_stack_size());
       body += Box(kUnboxedInt64);
       break;
     }
     case MethodRecognizer::kCoroutine_setAttributes: {
       body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += UnboxTruncate(kUnboxedAddress);
+      body += ConvertUnboxedToUntagged();
       body += LoadLocal(parsed_function_->RawParameterVariable(1));
       body += UnboxTruncate(kUnboxedInt64);
       body += StoreNativeField(Slot::Coroutine_attributes());
+      body += NullConstant();
+      break;
+    }
+    case MethodRecognizer::kCoroutine_getCaller: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += UnboxTruncate(kUnboxedAddress);
+      body += ConvertUnboxedToUntagged();
+      body += LoadNativeField(Slot::Coroutine_caller());
+      body += Box(kUnboxedInt64);
+      break;
+    }
+    case MethodRecognizer::kCoroutine_setCaller: {
+      body += LoadLocal(parsed_function_->RawParameterVariable(0));
+      body += UnboxTruncate(kUnboxedAddress);
+      body += ConvertUnboxedToUntagged();
+      body += LoadLocal(parsed_function_->RawParameterVariable(1));
+      body += UnboxTruncate(kUnboxedInt64);
+      body += StoreNativeField(Slot::Coroutine_caller());
       body += NullConstant();
       break;
     }

@@ -10,6 +10,7 @@
 #include "include/dart_native_api.h"
 #include "platform/assert.h"
 #include "platform/atomic.h"
+#include "platform/growable_array.h"
 #include "platform/text_buffer.h"
 #include "vm/canonical_tables.h"
 #include "vm/class_finalizer.h"
@@ -381,6 +382,8 @@ IsolateGroup::IsolateGroup(std::shared_ptr<IsolateGroupSource> source,
           NOT_IN_PRODUCT("IsolateGroup::kernel_data_class_cache_mutex_")),
       kernel_constants_mutex_(
           NOT_IN_PRODUCT("IsolateGroup::kernel_constants_mutex_")),
+      coroutine_mutex_(
+          NOT_IN_PRODUCT("IsolateGroup::coroutine_mutex_")),
       field_list_mutex_(NOT_IN_PRODUCT("Isolate::field_list_mutex_")),
       boxed_field_list_(GrowableObjectArray::null()),
       program_lock_(new SafepointRwLock()),
@@ -1744,9 +1747,9 @@ Isolate::Isolate(IsolateGroup* isolate_group,
       field_table_(new FieldTable(/*isolate=*/this)),
       finalizers_(GrowableObjectArray::null()),
       isolate_object_store_(new IsolateObjectStore()),
-      coroutines_registry_(GrowableObjectArray::null()),
+      coroutines_registry_(MallocGrowableArray<Coroutine*>()),
       isolate_group_(isolate_group),
-      saved_coroutine_(Coroutine::null()),
+      saved_coroutine_(nullptr),
       isolate_flags_(0),
 #if !defined(PRODUCT)
       last_resume_timestamp_(OS::GetCurrentTimeMillis()),
@@ -1777,8 +1780,6 @@ Isolate::Isolate(IsolateGroup* isolate_group,
   // how the vm_tag (kEmbedderTagId) can be set, these tags need to
   // move to the OSThread structure.
   set_user_tag(UserTags::kDefaultUserTag);
-  // active_coroutines()->Initialize();
-  // finished_coroutines()->Initialize();
 }
 
 #undef REUSABLE_HANDLE_SCOPE_INIT
@@ -2743,8 +2744,6 @@ void Isolate::VisitObjectPointers(ObjectPointerVisitor* visitor,
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&tag_table_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&sticky_error_));
   visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&finalizers_));
-  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&coroutines_registry_));
-  visitor->VisitPointer(reinterpret_cast<ObjectPtr*>(&saved_coroutine_));
 #if !defined(PRODUCT)
   visitor->VisitPointer(
       reinterpret_cast<ObjectPtr*>(&pending_service_extension_calls_));
@@ -3830,12 +3829,12 @@ bool Isolate::HasOpenNativeCallables() {
 }
 
 bool Isolate::HasCoroutine() const {
-  return saved_coroutine_ != Coroutine::null();
+  return saved_coroutine_ != nullptr;
 }
 
-CoroutinePtr Isolate::RestoreCoroutine() {
-  CoroutinePtr coroutine = saved_coroutine_;
-  saved_coroutine_ = Coroutine::null();
+Coroutine* Isolate::RestoreCoroutine() {
+  Coroutine* coroutine = saved_coroutine_;
+  saved_coroutine_ = nullptr;
   return coroutine;
 }
 

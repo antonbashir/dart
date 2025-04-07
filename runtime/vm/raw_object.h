@@ -5,11 +5,11 @@
 #ifndef RUNTIME_VM_RAW_OBJECT_H_
 #define RUNTIME_VM_RAW_OBJECT_H_
 
-#include "platform/globals.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
 
+#include "platform/globals.h"
 #include "platform/assert.h"
 #include "platform/thread_sanitizer.h"
 #include "vm/class_id.h"
@@ -24,7 +24,6 @@
 #include "vm/token.h"
 #include "vm/token_position.h"
 #include "vm/visitor.h"
-#include "vm/coroutine.h"
 
 // Currently we have two different axes for offset generation:
 //
@@ -3776,52 +3775,6 @@ class UntaggedFutureOr : public UntaggedInstance {
   COMPRESSED_POINTER_FIELD(TypeArgumentsPtr, type_arguments)
   VISIT_FROM(type_arguments)
   VISIT_TO(type_arguments)
-};
-
-class UntaggedCoroutine : public UntaggedInstance {
-  RAW_HEAP_OBJECT_IMPLEMENTATION(Coroutine);
-  COMPRESSED_POINTER_FIELD(StringPtr, name)
-  VISIT_FROM(name)
-  COMPRESSED_POINTER_FIELD(ClosurePtr, entry)
-  COMPRESSED_POINTER_FIELD(FunctionPtr, trampoline)
-  COMPRESSED_POINTER_FIELD(ObjectPtr, argument)
-  COMPRESSED_POINTER_FIELD(CoroutinePtr, caller)
-  COMPRESSED_POINTER_FIELD(CoroutinePtr, scheduler)
-  COMPRESSED_POINTER_FIELD(ObjectPtr, processor)
-  COMPRESSED_POINTER_FIELD(CoroutinePtr, to_processor_next)
-  COMPRESSED_POINTER_FIELD(CoroutinePtr, to_processor_previous)
-  VISIT_TO(to_processor_previous)
-  CompressedObjectPtr* to_snapshot(Snapshot::Kind kind) { return to(); }
-  uword stack_size_;
-  uword native_stack_base_;
-  uword stack_root_;
-  uword stack_base_;
-  uword stack_limit_;
-  uword overflow_stack_limit_;
-  uword attributes_;
-  uword index_;
-  CoroutineLink to_state_;
-
- public:
-  CoroutineLink* to_state() { return &to_state_; }
-  uword stack_size() const { return stack_size_; }
-  uword native_stack_base() const { return native_stack_base_; }
-  uword stack_base() const { return stack_base_; }
-  uword stack_root() const { return stack_root_; }
-  uword stack_limit() const { return stack_limit_; }
-  uword overflow_stack_limit() const { return overflow_stack_limit_; }
-
-  uword attributes() const { return attributes_; }
-  void set_attributes(uword attributes) { attributes_ = attributes; }
-
-  uword index() const { return index_; }
-  void set_index(uword index) { index_ = index; }
-
-  bool HasStackHeadroom() {
-    return OSThread::GetCurrentStackPointer() > overflow_stack_limit_;
-  }
-
-  static void VisitStack(CoroutinePtr coroutine, ObjectPointerVisitor* visitor);
 };
 
 #undef WSR_COMPRESSED_POINTER_FIELD

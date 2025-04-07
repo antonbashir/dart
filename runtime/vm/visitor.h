@@ -79,10 +79,6 @@ class ObjectPointerVisitor {
     return true;
   }
 
-  virtual bool CanVisitCoroutinePointers(CoroutinePtr coroutine) {
-    return true;
-  }
-
  private:
   IsolateGroup* isolate_group_;
   const char* gc_root_type_;

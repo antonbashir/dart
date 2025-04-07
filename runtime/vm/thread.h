@@ -5,13 +5,12 @@
 #ifndef RUNTIME_VM_THREAD_H_
 #define RUNTIME_VM_THREAD_H_
 
-#include "vm/tagged_pointer.h"
 #if defined(SHOULD_NOT_INCLUDE_RUNTIME)
 #error "Should not include runtime"
 #endif
 
+#include "vm/tagged_pointer.h"
 #include <setjmp.h>
-
 #include "include/dart_api.h"
 #include "platform/assert.h"
 #include "platform/atomic.h"
@@ -30,6 +29,7 @@
 #include "vm/tags.h"
 #include "vm/thread_stack_resource.h"
 #include "vm/thread_state.h"
+#include "vm/coroutine.h"
 
 namespace dart {
 
@@ -394,20 +394,20 @@ class Thread : public ThreadState {
   void SetStackLimit(uword value);
   void ClearStackLimit();
 
-  void RestoreCoroutine(CoroutinePtr coroutine);
-  CoroutinePtr SaveCoroutine();
-  void EnterCoroutine(CoroutinePtr coroutine);
+  void RestoreCoroutine(Coroutine* coroutine);
+  Coroutine* SaveCoroutine();
+  void EnterCoroutine(Coroutine* coroutine);
   void ExitCoroutine();
   void DisableCoroutine();
   void EnableCoroutine();
 
   bool has_coroutine() const;
   bool has_disabled_coroutine() const;
-  CoroutinePtr coroutine() const { return coroutine_; }
+  Coroutine* coroutine() const { return coroutine_; }
   static intptr_t coroutine_offset() { return OFFSET_OF(Thread, coroutine_); }
-  void set_coroutine(CoroutinePtr value) { coroutine_ = value; }
+  void set_coroutine(Coroutine* value) { coroutine_ = value; }
 
-  CoroutinePtr disabled_coroutine() const { return disabled_coroutine_; }
+  Coroutine* disabled_coroutine() const { return disabled_coroutine_; }
   static intptr_t disabled_coroutine_offset() {
     return OFFSET_OF(Thread, disabled_coroutine_);
   }
@@ -1264,8 +1264,8 @@ class Thread : public ThreadState {
   ObjectPtr active_exception_;
   ObjectPtr active_stacktrace_;
 
-  CoroutinePtr coroutine_;
-  CoroutinePtr disabled_coroutine_;
+  Coroutine* coroutine_;
+  Coroutine* disabled_coroutine_;
 
   ObjectPoolPtr global_object_pool_;
   uword resume_pc_;

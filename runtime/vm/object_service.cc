@@ -2129,14 +2129,7 @@ void SuspendState::PrintJSONImpl(JSONStream* stream, bool ref) const {
   Instance::PrintJSONImpl(stream, ref);
 }
 
-void Coroutine::PrintJSONImpl(JSONStream* stream, bool ref) const {
-  Instance::PrintJSONImpl(stream, ref);
-}
-
 void SuspendState::PrintImplementationFieldsImpl(
-    const JSONArray& jsarr_fields) const {}
-
-void Coroutine::PrintImplementationFieldsImpl(
     const JSONArray& jsarr_fields) const {}
 
 #endif

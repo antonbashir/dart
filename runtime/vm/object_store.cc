@@ -342,9 +342,6 @@ void ObjectStore::InitKnownObjects() {
 
   const Library& fiber_lib = Library::Handle(zone, fiber_library());
   ASSERT(!fiber_lib.IsNull());
-  cls = fiber_lib.LookupClassAllowPrivate(Symbols::_Coroutine());
-  ASSERT(!cls.IsNull());
-  ASSERT(cls.EnsureIsFinalized(thread) == Error::null());
 
   const Library& core_lib = Library::Handle(zone, core_library());
   cls = core_lib.LookupClassAllowPrivate(Symbols::_CompileTimeError());
