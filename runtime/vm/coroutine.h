@@ -33,7 +33,7 @@ class Coroutine {
     persistent = 1 << 5,
   };
 
-  Coroutine(){};
+  explicit Coroutine() = default;
 
   static Coroutine* New(uword size, uword owner_index, ObjectPtr owner, uword attributes, uword trampoline);
 
