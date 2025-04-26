@@ -1122,10 +1122,10 @@ class StreamInfo : public AllStatic {
 
 class Coroutine : public AllStatic {
  public:
- static word index_offset();
- static word attributes_offset();
- static word caller_offset();
- static word owner_offset();
+  static word index_offset();
+  static word attributes_offset();
+  static word caller_offset();
+  static word owner_offset();
 };
 
 class MonomorphicSmiableCall : public AllStatic {

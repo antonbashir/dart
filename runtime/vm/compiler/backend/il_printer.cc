@@ -177,24 +177,25 @@ class IlTestPrinter : public AllStatic {
    public:
     explicit AttributesSerializer(JSONWriter* writer) : writer_(writer) {}
 
-    void WriteDescriptors() {
+   void WriteDescriptors(){
 #define DECLARE_VISIT_INSTRUCTION(ShortName, Attrs)                            \
   WriteDescriptor<ShortName##Instr>(#ShortName);
 
-      FOR_EACH_INSTRUCTION(DECLARE_VISIT_INSTRUCTION)
+       FOR_EACH_INSTRUCTION(DECLARE_VISIT_INSTRUCTION)
 
 #undef DECLARE_VISIT_INSTRUCTION
-    }
+   }
 
 #define DECLARE_VISIT_INSTRUCTION(ShortName, Attrs)                            \
   virtual void Visit##ShortName(ShortName##Instr* instr) { Write(instr); }
 
-    FOR_EACH_INSTRUCTION(DECLARE_VISIT_INSTRUCTION)
+   FOR_EACH_INSTRUCTION(DECLARE_VISIT_INSTRUCTION)
 
 #undef DECLARE_VISIT_INSTRUCTION
 
-   private:
-    void WriteAttribute(const char* value) { writer_->PrintValue(value); }
+       private : void WriteAttribute(const char* value) {
+      writer_->PrintValue(value);
+    }
 
     void WriteAttribute(intptr_t value) { writer_->PrintValue(value); }
 

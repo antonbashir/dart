@@ -16,10 +16,7 @@ DEFINE_NATIVE_ENTRY(Coroutine_create, 0, 5) {
   GET_NON_NULL_NATIVE_ARGUMENT(Smi, attributes, arguments->NativeArgAt(3));
   GET_NON_NULL_NATIVE_ARGUMENT(Closure, trampoline, arguments->NativeArgAt(4));
   auto coroutine = (intptr_t)Coroutine::New(
-      size.Value(),
-      owner_index.Value(),
-      owner.ptr(),
-      attributes.Value(),
+      size.Value(), owner_index.Value(), owner.ptr(), attributes.Value(),
       Function::Handle(trampoline.function()).entry_point());
   return Smi::New(coroutine);
 }

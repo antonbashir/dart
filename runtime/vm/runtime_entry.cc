@@ -3369,8 +3369,8 @@ DEFINE_RUNTIME_ENTRY(FixAllocationStubTarget, 0) {
 
 const char* DeoptReasonToCString(ICData::DeoptReasonId deopt_reason) {
   switch (deopt_reason) {
-#define DEOPT_REASON_TO_TEXT(name) \
-  case ICData::kDeopt##name:       \
+#define DEOPT_REASON_TO_TEXT(name)                                             \
+  case ICData::kDeopt##name:                                                   \
     return #name;
     DEOPT_REASONS(DEOPT_REASON_TO_TEXT)
 #undef DEOPT_REASON_TO_TEXT
@@ -3872,7 +3872,8 @@ DEFINE_RUNTIME_ENTRY(FfiAsyncCallbackSend, 1) {
 
 DEFINE_LEAF_RUNTIME_ENTRY(void, EnterCoroutine, 1, uword coroutine) {
   auto thread = Thread::Current();
-  reinterpret_cast<Coroutine*>(coroutine)->HandleRootEnter(thread, thread->zone());
+  reinterpret_cast<Coroutine*>(coroutine)->HandleRootEnter(thread,
+                                                           thread->zone());
 }
 END_LEAF_RUNTIME_ENTRY
 
@@ -3885,7 +3886,8 @@ END_LEAF_RUNTIME_ENTRY
 
 DEFINE_LEAF_RUNTIME_ENTRY(void, EnterForkedCoroutine, 1, uword coroutine) {
   auto thread = Thread::Current();
-  reinterpret_cast<Coroutine*>(coroutine)->HandleForkedEnter(thread, thread->zone());
+  reinterpret_cast<Coroutine*>(coroutine)->HandleForkedEnter(thread,
+                                                             thread->zone());
 }
 END_LEAF_RUNTIME_ENTRY
 
@@ -3897,7 +3899,8 @@ DEFINE_LEAF_RUNTIME_ENTRY(void, ExitForkedCoroutine, 0) {
 END_LEAF_RUNTIME_ENTRY
 
 DEFINE_LEAF_RUNTIME_ENTRY(void, JumpToFrameCoroutine, 1, uword stack_pointer) {
-  Thread::Current()->coroutine()->HandleJumpToFrame(Thread::Current(), stack_pointer);
+  Thread::Current()->coroutine()->HandleJumpToFrame(Thread::Current(),
+                                                    stack_pointer);
 }
 END_LEAF_RUNTIME_ENTRY
 

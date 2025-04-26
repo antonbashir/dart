@@ -88,7 +88,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <functional>
 #include <sys/types.h>
 #include <cassert>  // For assert() in constant expressions.
 

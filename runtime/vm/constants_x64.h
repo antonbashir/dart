@@ -669,13 +669,12 @@ class CallingConventions {
   static constexpr Register kSecondNonArgumentRegister = RBX;
   static constexpr Register kStackPointerRegister = SPREG;
 
-  COMPILE_ASSERT(((R(kFfiAnyNonAbiRegister)) & kCalleeSaveCpuRegisters) != 0);
+  COMPILE_ASSERT(((R(kFfiAnyNonAbiRegister))&kCalleeSaveCpuRegisters) != 0);
 
   COMPILE_ASSERT(
       ((R(kFirstNonArgumentRegister) | R(kSecondNonArgumentRegister)) &
        (kArgumentRegisters | R(kPointerToReturnStructRegisterCall))) == 0);
 };
-
 
 struct CoroutineInitializeABI {
   static constexpr Register kCoroutineReg = CallingConventions::kArg1Reg;

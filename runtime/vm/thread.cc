@@ -57,7 +57,7 @@ Thread::~Thread() {
 }
 
 #if defined(DEBUG)
-#define REUSABLE_HANDLE_SCOPE_INIT(object) \
+#define REUSABLE_HANDLE_SCOPE_INIT(object)                                     \
   reusable_##object##_handle_scope_active_(false),
 #else
 #define REUSABLE_HANDLE_SCOPE_INIT(object)
@@ -114,7 +114,7 @@ Thread::Thread(bool is_vm_isolate)
               next_(nullptr) {
 #endif
 
-#define DEFAULT_INIT(type_name, member_name, init_expr, default_init_value) \
+#define DEFAULT_INIT(type_name, member_name, init_expr, default_init_value)    \
   member_name = default_init_value;
   CACHED_CONSTANTS_LIST(DEFAULT_INIT)
 #undef DEFAULT_INIT
@@ -191,13 +191,13 @@ void Thread::InitVMConstants() {
   heap_base_ = Object::null()->heap_base();
 #endif
 
-#define ASSERT_VM_HEAP(type_name, member_name, init_expr, default_init_value) \
+#define ASSERT_VM_HEAP(type_name, member_name, init_expr, default_init_value)  \
   ASSERT((init_expr)->IsOldObject());
   CACHED_VM_OBJECTS_LIST(ASSERT_VM_HEAP)
 #undef ASSERT_VM_HEAP
 
-#define INIT_VALUE(type_name, member_name, init_expr, default_init_value) \
-  ASSERT(member_name == default_init_value);                              \
+#define INIT_VALUE(type_name, member_name, init_expr, default_init_value)      \
+  ASSERT(member_name == default_init_value);                                   \
   member_name = (init_expr);
   CACHED_CONSTANTS_LIST(INIT_VALUE)
 #undef INIT_VALUE
@@ -208,20 +208,20 @@ void Thread::InitVMConstants() {
         i * kStoreBufferWrapperSize;
   }
 
-#define INIT_VALUE(name)            \
-  ASSERT(name##_entry_point_ == 0); \
+#define INIT_VALUE(name)                                                       \
+  ASSERT(name##_entry_point_ == 0);                                            \
   name##_entry_point_ = k##name##RuntimeEntry.GetEntryPoint();
   RUNTIME_ENTRY_LIST(INIT_VALUE)
 #undef INIT_VALUE
 
-#define INIT_VALUE(returntype, name, ...) \
-  ASSERT(name##_entry_point_ == 0);       \
+#define INIT_VALUE(returntype, name, ...)                                      \
+  ASSERT(name##_entry_point_ == 0);                                            \
   name##_entry_point_ = k##name##RuntimeEntry.GetEntryPoint();
   LEAF_RUNTIME_ENTRY_LIST(INIT_VALUE)
 #undef INIT_VALUE
 
 // Setup the thread specific reusable handles.
-#define REUSABLE_HANDLE_ALLOCATION(object) \
+#define REUSABLE_HANDLE_ALLOCATION(object)                                     \
   this->object##_handle_ = this->AllocateReusableHandle<object>();
   REUSABLE_HANDLE_LIST(REUSABLE_HANDLE_ALLOCATION)
 #undef REUSABLE_HANDLE_ALLOCATION
@@ -1056,7 +1056,8 @@ void Thread::ClearReusableHandles() {
 #undef CLEAR_REUSABLE_HANDLE
 }
 
-void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor, ValidationPolicy validation_policy) {
+void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor,
+                                 ValidationPolicy validation_policy) {
   ASSERT(visitor != nullptr);
 
   if (zone() != nullptr) {
@@ -1109,7 +1110,9 @@ void Thread::VisitObjectPointers(ObjectPointerVisitor* visitor, ValidationPolicy
   }
 }
 
-void Thread::VisitObjectPointersCoroutine(Isolate* isolate, ObjectPointerVisitor* visitor, ValidationPolicy validation_policy) {
+void Thread::VisitObjectPointersCoroutine(Isolate* isolate,
+                                          ObjectPointerVisitor* visitor,
+                                          ValidationPolicy validation_policy) {
   ASSERT(visitor != nullptr);
 
   if (zone() != nullptr) {
@@ -1143,24 +1146,32 @@ void Thread::VisitObjectPointersCoroutine(Isolate* isolate, ObjectPointerVisitor
     // Unfortunately we cannot use `this->IsAtSafepoint()` here because that
     // will return `false` even though the mutator thread is waiting for mark
     // tasks (which iterate its stack) to finish.
-    const StackFrameIterator::CrossThreadPolicy cross_thread_policy = StackFrameIterator::kAllowCrossThreadIteration;
-    
+    const StackFrameIterator::CrossThreadPolicy cross_thread_policy =
+        StackFrameIterator::kAllowCrossThreadIteration;
+
     MutexLocker lock(isolate->group()->coroutine_mutex());
 
     // Iterate over all the stack frames and visit objects on the stack.
-    StackFrameIterator thread_frames_iterator(top_exit_frame_info(), validation_policy, this, cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
+    StackFrameIterator thread_frames_iterator(
+        top_exit_frame_info(), validation_policy, this, cross_thread_policy,
+        StackFrameIterator::kStackOwnerCoroutine);
     StackFrame* frame = thread_frames_iterator.NextFrame();
     visitor->set_gc_root_type("frame");
     while (frame != nullptr) {
       frame->VisitObjectPointers(visitor);
       frame = thread_frames_iterator.NextFrame();
-      if (frame != nullptr && StubCode::InCoroutineForkStub(frame->GetCallerPc())) {
+      if (frame != nullptr &&
+          StubCode::InCoroutineForkStub(frame->GetCallerPc())) {
         frame->VisitObjectPointers(visitor);
         break;
       }
-      if (frame != nullptr && StubCode::InCoroutineInitializeStub(frame->GetCallerPc())) {
-        const uword stub_fp = *reinterpret_cast<uword*>(coroutine_->native_stack_base());
-        StackFrameIterator native_coroutine_frames_iterator(stub_fp, validation_policy, this, cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
+      if (frame != nullptr &&
+          StubCode::InCoroutineInitializeStub(frame->GetCallerPc())) {
+        const uword stub_fp =
+            *reinterpret_cast<uword*>(coroutine_->native_stack_base());
+        StackFrameIterator native_coroutine_frames_iterator(
+            stub_fp, validation_policy, this, cross_thread_policy,
+            StackFrameIterator::kStackOwnerCoroutine);
         StackFrame* frame = native_coroutine_frames_iterator.NextFrame();
         while (frame != nullptr) {
           frame->VisitObjectPointers(visitor);
@@ -1174,7 +1185,9 @@ void Thread::VisitObjectPointersCoroutine(Isolate* isolate, ObjectPointerVisitor
     auto coroutines_count = isolate->coroutines_registry().length();
     for (auto index = 0; index < coroutines_count; index++) {
       auto& item = coroutines[index];
-      if ((item != nullptr) && (item->attributes() & (Coroutine::CoroutineAttributes::suspended)) != 0) {
+      if ((item != nullptr) &&
+          (item->attributes() & (Coroutine::CoroutineAttributes::suspended)) !=
+              0) {
         Coroutine::VisitStack(item, visitor);
       }
     }
@@ -1308,14 +1321,18 @@ void Thread::RestoreWriteBarrierInvariant(RestoreWriteBarrierInvariantOp op) {
   }
 }
 
-static bool RestoreWriteBarrierInvariantForFrame(ObjectStore* object_store, StackFrame* frame, bool scan, ObjectPointerVisitor* visitor) {
+static bool RestoreWriteBarrierInvariantForFrame(
+    ObjectStore* object_store,
+    StackFrame* frame,
+    bool scan,
+    ObjectPointerVisitor* visitor) {
   if (frame->IsExitFrame()) {
     scan = true;
   } else if (frame->IsEntryFrame()) {
   } else if (frame->IsStubFrame()) {
     const uword pc = frame->pc();
-    if (Code::ContainsInstructionAt(
-            object_store->init_late_static_field_stub(), pc) ||
+    if (Code::ContainsInstructionAt(object_store->init_late_static_field_stub(),
+                                    pc) ||
         Code::ContainsInstructionAt(
             object_store->init_late_final_static_field_stub(), pc) ||
         Code::ContainsInstructionAt(
@@ -1334,7 +1351,9 @@ static bool RestoreWriteBarrierInvariantForFrame(ObjectStore* object_store, Stac
   return scan;
 }
 
-void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWriteBarrierInvariantOp op) {
+void Thread::RestoreWriteBarrierInvariantCoroutine(
+    Isolate* isolate,
+    RestoreWriteBarrierInvariantOp op) {
   MutexLocker lock(isolate->group()->coroutine_mutex());
 
   ASSERT(IsAtSafepoint() || OwnsGCSafepoint() || this == Thread::Current());
@@ -1342,25 +1361,38 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
   RestoreWriteBarrierInvariantVisitor visitor(isolate_group(), this, op);
   ObjectStore* object_store = isolate_group()->object_store();
 
-  const StackFrameIterator::CrossThreadPolicy cross_thread_policy = StackFrameIterator::kAllowCrossThreadIteration;
+  const StackFrameIterator::CrossThreadPolicy cross_thread_policy =
+      StackFrameIterator::kAllowCrossThreadIteration;
 
-  StackFrameIterator thread_frames_iterator(top_exit_frame_info(), ValidationPolicy::kDontValidateFrames, this, cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
+  StackFrameIterator thread_frames_iterator(
+      top_exit_frame_info(), ValidationPolicy::kDontValidateFrames, this,
+      cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
   bool scan_next_dart_frame = false;
-  for (StackFrame* frame = thread_frames_iterator.NextFrame(); frame != nullptr;) {
-    scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+  for (StackFrame* frame = thread_frames_iterator.NextFrame();
+       frame != nullptr;) {
+    scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(
+        object_store, frame, scan_next_dart_frame, &visitor);
     frame = thread_frames_iterator.NextFrame();
-    if (frame != nullptr && StubCode::InCoroutineForkStub(frame->GetCallerPc())) {
-      scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+    if (frame != nullptr &&
+        StubCode::InCoroutineForkStub(frame->GetCallerPc())) {
+      scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(
+          object_store, frame, scan_next_dart_frame, &visitor);
       break;
     }
-    if (frame != nullptr && StubCode::InCoroutineInitializeStub(frame->GetCallerPc())) {
-      RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+    if (frame != nullptr &&
+        StubCode::InCoroutineInitializeStub(frame->GetCallerPc())) {
+      RestoreWriteBarrierInvariantForFrame(object_store, frame,
+                                           scan_next_dart_frame, &visitor);
       scan_next_dart_frame = false;
-      const uword stub_fp = *reinterpret_cast<uword*>(coroutine_->native_stack_base());
-      StackFrameIterator frames_iterator(stub_fp, ValidationPolicy::kDontValidateFrames, this, cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
+      const uword stub_fp =
+          *reinterpret_cast<uword*>(coroutine_->native_stack_base());
+      StackFrameIterator frames_iterator(
+          stub_fp, ValidationPolicy::kDontValidateFrames, this,
+          cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
       StackFrame* frame = frames_iterator.NextFrame();
       while (frame != nullptr) {
-        scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+        scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(
+            object_store, frame, scan_next_dart_frame, &visitor);
         frame = frames_iterator.NextFrame();
       }
       break;
@@ -1371,29 +1403,41 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
   auto coroutines_count = isolate->coroutines_registry().length();
   for (auto index = 0; index < coroutines_count; index++) {
     auto& item = coroutines[index];
-    if ((item != nullptr) && (item->attributes() & Coroutine::CoroutineAttributes::suspended) != 0) {
+    if ((item != nullptr) &&
+        (item->attributes() & Coroutine::CoroutineAttributes::suspended) != 0) {
       ASSERT(item->stack_base() != 0);
       auto stack_base = item->stack_base();
       auto native_stack_base = item->native_stack_base();
       const uword stub_fp = *reinterpret_cast<uword*>(stack_base);
-      StackFrameIterator coroutine_frames_iterator(stub_fp, ValidationPolicy::kDontValidateFrames, this, cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
+      StackFrameIterator coroutine_frames_iterator(
+          stub_fp, ValidationPolicy::kDontValidateFrames, this,
+          cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
       bool scan_next_dart_frame = false;
-      for (StackFrame* frame = coroutine_frames_iterator.NextFrame(); frame != nullptr;) {
-        scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+      for (StackFrame* frame = coroutine_frames_iterator.NextFrame();
+           frame != nullptr;) {
+        scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(
+            object_store, frame, scan_next_dart_frame, &visitor);
         frame = coroutine_frames_iterator.NextFrame();
-        if (frame != nullptr && StubCode::InCoroutineForkStub(frame->GetCallerPc())) {
-          scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+        if (frame != nullptr &&
+            StubCode::InCoroutineForkStub(frame->GetCallerPc())) {
+          scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(
+              object_store, frame, scan_next_dart_frame, &visitor);
           break;
         }
-        if (frame != nullptr && StubCode::InCoroutineInitializeStub(frame->GetCallerPc())) {
-          RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+        if (frame != nullptr &&
+            StubCode::InCoroutineInitializeStub(frame->GetCallerPc())) {
+          RestoreWriteBarrierInvariantForFrame(object_store, frame,
+                                               scan_next_dart_frame, &visitor);
           scan_next_dart_frame = false;
           ASSERT(item->native_stack_base() != 0);
           const uword stub_fp = *reinterpret_cast<uword*>(native_stack_base);
-          StackFrameIterator native_coroutine_frames_iterator(stub_fp, ValidationPolicy::kDontValidateFrames, this, cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
+          StackFrameIterator native_coroutine_frames_iterator(
+              stub_fp, ValidationPolicy::kDontValidateFrames, this,
+              cross_thread_policy, StackFrameIterator::kStackOwnerCoroutine);
           StackFrame* frame = native_coroutine_frames_iterator.NextFrame();
           while (frame != nullptr) {
-            scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(object_store, frame, scan_next_dart_frame, &visitor);
+            scan_next_dart_frame = RestoreWriteBarrierInvariantForFrame(
+                object_store, frame, scan_next_dart_frame, &visitor);
             frame = native_coroutine_frames_iterator.NextFrame();
           }
           break;
@@ -1405,7 +1449,8 @@ void Thread::RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWrit
 
 void Thread::DeferredMarkLiveTemporaries(Isolate* isolate) {
   if (has_coroutine()) {
-    RestoreWriteBarrierInvariantCoroutine(isolate, RestoreWriteBarrierInvariantOp::kAddToDeferredMarkingStack);
+    RestoreWriteBarrierInvariantCoroutine(
+        isolate, RestoreWriteBarrierInvariantOp::kAddToDeferredMarkingStack);
     return;
   }
   RestoreWriteBarrierInvariant(
@@ -1414,7 +1459,8 @@ void Thread::DeferredMarkLiveTemporaries(Isolate* isolate) {
 
 void Thread::RememberLiveTemporaries(Isolate* isolate) {
   if (has_coroutine()) {
-    RestoreWriteBarrierInvariantCoroutine(isolate, RestoreWriteBarrierInvariantOp::kAddToRememberedSet);
+    RestoreWriteBarrierInvariantCoroutine(
+        isolate, RestoreWriteBarrierInvariantOp::kAddToRememberedSet);
     return;
   }
   RestoreWriteBarrierInvariant(
@@ -1426,9 +1472,9 @@ bool Thread::CanLoadFromThread(const Object& object) {
   // objects *before* stubs are initialized, we only loop ver the stubs if the
   // [object] is in fact a [Code] object.
   if (object.IsCode()) {
-#define CHECK_OBJECT(type_name, member_name, expr, default_init_value) \
-  if (object.ptr() == expr) {                                          \
-    return true;                                                       \
+#define CHECK_OBJECT(type_name, member_name, expr, default_init_value)         \
+  if (object.ptr() == expr) {                                                  \
+    return true;                                                               \
   }
     CACHED_VM_STUBS_LIST(CHECK_OBJECT)
 #undef CHECK_OBJECT
@@ -1436,9 +1482,9 @@ bool Thread::CanLoadFromThread(const Object& object) {
 
   // For non [Code] objects we check if the object equals to any of the cached
   // non-stub entries.
-#define CHECK_OBJECT(type_name, member_name, expr, default_init_value) \
-  if (object.ptr() == expr) {                                          \
-    return true;                                                       \
+#define CHECK_OBJECT(type_name, member_name, expr, default_init_value)         \
+  if (object.ptr() == expr) {                                                  \
+    return true;                                                               \
   }
   CACHED_NON_VM_STUB_LIST(CHECK_OBJECT)
 #undef CHECK_OBJECT
@@ -1450,10 +1496,10 @@ intptr_t Thread::OffsetFromThread(const Object& object) {
   // objects *before* stubs are initialized, we only loop ver the stubs if the
   // [object] is in fact a [Code] object.
   if (object.IsCode()) {
-#define COMPUTE_OFFSET(type_name, member_name, expr, default_init_value) \
-  ASSERT((expr)->untag()->InVMIsolateHeap());                            \
-  if (object.ptr() == expr) {                                            \
-    return Thread::member_name##offset();                                \
+#define COMPUTE_OFFSET(type_name, member_name, expr, default_init_value)       \
+  ASSERT((expr)->untag()->InVMIsolateHeap());                                  \
+  if (object.ptr() == expr) {                                                  \
+    return Thread::member_name##offset();                                      \
   }
     CACHED_VM_STUBS_LIST(COMPUTE_OFFSET)
 #undef COMPUTE_OFFSET
@@ -1461,9 +1507,9 @@ intptr_t Thread::OffsetFromThread(const Object& object) {
 
   // For non [Code] objects we check if the object equals to any of the cached
   // non-stub entries.
-#define COMPUTE_OFFSET(type_name, member_name, expr, default_init_value) \
-  if (object.ptr() == expr) {                                            \
-    return Thread::member_name##offset();                                \
+#define COMPUTE_OFFSET(type_name, member_name, expr, default_init_value)       \
+  if (object.ptr() == expr) {                                                  \
+    return Thread::member_name##offset();                                      \
   }
   CACHED_NON_VM_STUB_LIST(COMPUTE_OFFSET)
 #undef COMPUTE_OFFSET
@@ -1479,10 +1525,10 @@ bool Thread::ObjectAtOffset(intptr_t offset, Object* object) {
     return false;
   }
 
-#define COMPUTE_OFFSET(type_name, member_name, expr, default_init_value) \
-  if (Thread::member_name##offset() == offset) {                         \
-    *object = expr;                                                      \
-    return true;                                                         \
+#define COMPUTE_OFFSET(type_name, member_name, expr, default_init_value)       \
+  if (Thread::member_name##offset() == offset) {                               \
+    *object = expr;                                                            \
+    return true;                                                               \
   }
   CACHED_VM_OBJECTS_LIST(COMPUTE_OFFSET)
 #undef COMPUTE_OFFSET
@@ -1490,16 +1536,16 @@ bool Thread::ObjectAtOffset(intptr_t offset, Object* object) {
 }
 
 intptr_t Thread::OffsetFromThread(const RuntimeEntry* runtime_entry) {
-#define COMPUTE_OFFSET(name)                     \
-  if (runtime_entry == &k##name##RuntimeEntry) { \
-    return Thread::name##_entry_point_offset();  \
+#define COMPUTE_OFFSET(name)                                                   \
+  if (runtime_entry == &k##name##RuntimeEntry) {                               \
+    return Thread::name##_entry_point_offset();                                \
   }
   RUNTIME_ENTRY_LIST(COMPUTE_OFFSET)
 #undef COMPUTE_OFFSET
 
-#define COMPUTE_OFFSET(returntype, name, ...)    \
-  if (runtime_entry == &k##name##RuntimeEntry) { \
-    return Thread::name##_entry_point_offset();  \
+#define COMPUTE_OFFSET(returntype, name, ...)                                  \
+  if (runtime_entry == &k##name##RuntimeEntry) {                               \
+    return Thread::name##_entry_point_offset();                                \
   }
   LEAF_RUNTIME_ENTRY_LIST(COMPUTE_OFFSET)
 #undef COMPUTE_OFFSET
@@ -1723,9 +1769,9 @@ void Thread::SetupDartMutatorStateDependingOnSnapshot(IsolateGroup* group) {
     if (dispatch_table != nullptr) {
       dispatch_table_array_ = dispatch_table->ArrayOrigin();
     }
-#define INIT_ENTRY_POINT(name)                                          \
-  if (object_store->name() != Object::null()) {                         \
-    name##_entry_point_ = Function::EntryPointOf(object_store->name()); \
+#define INIT_ENTRY_POINT(name)                                                 \
+  if (object_store->name() != Object::null()) {                                \
+    name##_entry_point_ = Function::EntryPointOf(object_store->name());        \
   }
     CACHED_FUNCTION_ENTRY_POINTS_LIST(INIT_ENTRY_POINT)
 #undef INIT_ENTRY_POINT
@@ -1766,8 +1812,7 @@ DisableThreadInterruptsScope::~DisableThreadInterruptsScope() {
 }
 #endif
 
-NoReloadScope::NoReloadScope(Thread* thread)
-    : ThreadStackResource(thread) {
+NoReloadScope::NoReloadScope(Thread* thread) : ThreadStackResource(thread) {
 #if !defined(PRODUCT) && !defined(DART_PRECOMPILED_RUNTIME)
   thread->no_reload_scope_depth_++;
   ASSERT(thread->no_reload_scope_depth_ >= 0);

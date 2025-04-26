@@ -12,7 +12,11 @@
 #include "vm/zone.h"
 
 namespace dart {
-Coroutine* Coroutine::New(uword size, uword owner_index, ObjectPtr owner, uword attributes, uword trampoline) {
+Coroutine* Coroutine::New(uword size,
+                          uword owner_index,
+                          ObjectPtr owner,
+                          uword attributes,
+                          uword trampoline) {
   auto isolate = Isolate::Current();
   auto& registry = isolate->coroutines_registry();
   auto page_size = VirtualMemory::PageSize();
@@ -21,12 +25,11 @@ Coroutine* Coroutine::New(uword size, uword owner_index, ObjectPtr owner, uword 
   const auto coroutine = new Coroutine();
 #if defined(DART_TARGET_OS_WINDOWS)
   void* stack_base = (void*)((uword)VirtualAlloc(
-      nullptr, stack_size, MEM_RESERVE | MEM_COMMIT,
-      PAGE_READWRITE));
+      nullptr, stack_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
 #else
-  void* stack_end = (void*)((uword)mmap(
-      nullptr, stack_size_, PROT_READ | PROT_WRITE | PROT_EXEC,
-      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+  void* stack_end = (void*)((uword)mmap(nullptr, stack_size_,
+                                        PROT_READ | PROT_WRITE | PROT_EXEC,
+                                        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 #endif
   auto stack_limit = (uword)(stack_end);
   auto stack_base = (uword)(stack_size_ + (char*)stack_end);
@@ -37,12 +40,15 @@ Coroutine* Coroutine::New(uword size, uword owner_index, ObjectPtr owner, uword 
   coroutine->stack_root_ = stack_base;
   coroutine->stack_base_ = stack_base;
   coroutine->stack_limit_ = stack_limit;
-  coroutine->overflow_stack_limit_ = stack_limit + calculate_headroom(stack_base - stack_limit);
+  coroutine->overflow_stack_limit_ =
+      stack_limit + calculate_headroom(stack_base - stack_limit);
   coroutine->trampoline_ = trampoline;
   coroutine->index_ = registry.length();
   coroutine->owner_ = owner_index;
 
-  FinalizablePersistentHandle::New(IsolateGroup::Current(), Object::Handle(owner), coroutine, free, sizeof(Coroutine), true);
+  FinalizablePersistentHandle::New(IsolateGroup::Current(),
+                                   Object::Handle(owner), coroutine, free,
+                                   sizeof(Coroutine), true);
 
   registry.Add(coroutine);
 
@@ -54,7 +60,9 @@ void Coroutine::free(void* isolate_callback_data, void* peer) {
 }
 
 void Coroutine::dispose(Thread* thread, Zone* zone) {
-  change_state(CoroutineAttributes::created | CoroutineAttributes::running | CoroutineAttributes::suspended, CoroutineAttributes::disposed);
+  change_state(CoroutineAttributes::created | CoroutineAttributes::running |
+                   CoroutineAttributes::suspended,
+               CoroutineAttributes::disposed);
   set_trampoline((uword) nullptr);
 #if defined(DART_TARGET_OS_WINDOWS)
   VirtualFree((void*)stack_limit(), 0, MEM_RELEASE);
@@ -80,7 +88,8 @@ void Coroutine::HandleJumpToFrame(Thread* thread, uword stack_pointer) {
     if (candidate == nullptr) {
       continue;
     }
-    if (stack_pointer > candidate->stack_limit() && stack_pointer <= candidate->stack_root()) {
+    if (stack_pointer > candidate->stack_limit() &&
+        stack_pointer <= candidate->stack_root()) {
       found = candidate;
       break;
     }
@@ -94,7 +103,8 @@ void Coroutine::HandleJumpToFrame(Thread* thread, uword stack_pointer) {
   }
   MutexLocker lock(Thread::Current()->isolate()->group()->coroutine_mutex());
   dispose(thread, zone);
-  found->change_state(CoroutineAttributes::suspended, CoroutineAttributes::running);
+  found->change_state(CoroutineAttributes::suspended,
+                      CoroutineAttributes::running);
   thread->EnterCoroutine(found);
 }
 
@@ -118,7 +128,8 @@ void Coroutine::HandleRootExit(Thread* thread, Zone* zone) {
   }
 
   coroutines.TruncateTo(0);
-  thread->isolate()->set_coroutines_registry(MallocGrowableArray<Coroutine*>(FLAG_coroutines_registry_initial_capacity));
+  thread->isolate()->set_coroutines_registry(MallocGrowableArray<Coroutine*>(
+      FLAG_coroutines_registry_initial_capacity));
   thread->ExitCoroutine();
 }
 
@@ -130,31 +141,42 @@ void Coroutine::HandleForkedEnter(Thread* thread, Zone* zone) {
 void Coroutine::HandleForkedExit(Thread* thread, Zone* zone) {
   MutexLocker lock(Thread::Current()->isolate()->group()->coroutine_mutex());
   auto saved_caller = caller();
-  auto new_caller_state = (saved_caller->attributes() & ~CoroutineAttributes::suspended) | CoroutineAttributes::running;
+  auto new_caller_state =
+      (saved_caller->attributes() & ~CoroutineAttributes::suspended) |
+      CoroutineAttributes::running;
   saved_caller->set_attributes(new_caller_state);
   dispose(thread, zone);
   thread->EnterCoroutine(saved_caller);
 }
 
-void Coroutine::VisitStack(Coroutine* coroutine, ObjectPointerVisitor* visitor) {
+void Coroutine::VisitStack(Coroutine* coroutine,
+                           ObjectPointerVisitor* visitor) {
   auto stack = coroutine->stack_base();
   ASSERT(stack != 0);
   auto native_stack = coroutine->native_stack_base();
   Thread* thread = Thread::Current();
   const uword stub_fp = *reinterpret_cast<uword*>(stack);
-  StackFrameIterator coroutine_frames_iterator(stub_fp, ValidationPolicy::kDontValidateFrames, thread, StackFrameIterator::kAllowCrossThreadIteration, StackFrameIterator::kStackOwnerCoroutine);
+  StackFrameIterator coroutine_frames_iterator(
+      stub_fp, ValidationPolicy::kDontValidateFrames, thread,
+      StackFrameIterator::kAllowCrossThreadIteration,
+      StackFrameIterator::kStackOwnerCoroutine);
   StackFrame* frame = coroutine_frames_iterator.NextFrame();
   while (frame != nullptr) {
     frame->VisitObjectPointers(visitor);
     frame = coroutine_frames_iterator.NextFrame();
-    if (frame != nullptr && StubCode::InCoroutineForkStub(frame->GetCallerPc())) {
+    if (frame != nullptr &&
+        StubCode::InCoroutineForkStub(frame->GetCallerPc())) {
       frame->VisitObjectPointers(visitor);
       break;
     }
-    if (frame != nullptr && StubCode::InCoroutineInitializeStub(frame->GetCallerPc())) {
+    if (frame != nullptr &&
+        StubCode::InCoroutineInitializeStub(frame->GetCallerPc())) {
       frame->VisitObjectPointers(visitor);
       const uword stub_fp = *reinterpret_cast<uword*>(native_stack);
-      StackFrameIterator native_coroutine_frames_iterator(stub_fp, ValidationPolicy::kDontValidateFrames, thread, StackFrameIterator::kAllowCrossThreadIteration, StackFrameIterator::kStackOwnerCoroutine);
+      StackFrameIterator native_coroutine_frames_iterator(
+          stub_fp, ValidationPolicy::kDontValidateFrames, thread,
+          StackFrameIterator::kAllowCrossThreadIteration,
+          StackFrameIterator::kStackOwnerCoroutine);
       StackFrame* frame = native_coroutine_frames_iterator.NextFrame();
       while (frame != nullptr) {
         frame->VisitObjectPointers(visitor);

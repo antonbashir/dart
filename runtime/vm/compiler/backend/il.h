@@ -11480,7 +11480,7 @@ class CoroutineInitializeInstr : public TemplateDefinition<1, Throws> {
  public:
   CoroutineInitializeInstr(Value* root, intptr_t deopt_id)
       : TemplateDefinition(InstructionSource(TokenPosition::kNoSource),
-                            deopt_id) {
+                           deopt_id) {
     SetInputAt(0, root);
   }
 
@@ -11506,7 +11506,7 @@ class CoroutineTransferInstr : public TemplateDefinition<2, Throws> {
  public:
   CoroutineTransferInstr(Value* from, Value* to, intptr_t deopt_id)
       : TemplateDefinition(InstructionSource(TokenPosition::kNoSource),
-                            deopt_id) {
+                           deopt_id) {
     SetInputAt(0, from);
     SetInputAt(1, to);
   }
@@ -11535,7 +11535,7 @@ class CoroutineForkInstr : public TemplateDefinition<2, Throws> {
  public:
   CoroutineForkInstr(Value* from, Value* to, intptr_t deopt_id)
       : TemplateDefinition(InstructionSource(TokenPosition::kNoSource),
-                            deopt_id) {
+                           deopt_id) {
     SetInputAt(0, from);
     SetInputAt(1, to);
   }

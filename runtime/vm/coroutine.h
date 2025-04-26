@@ -35,7 +35,11 @@ class Coroutine {
 
   explicit Coroutine() = default;
 
-  static Coroutine* New(uword size, uword owner_index, ObjectPtr owner, uword attributes, uword trampoline);
+  static Coroutine* New(uword size,
+                        uword owner_index,
+                        ObjectPtr owner,
+                        uword attributes,
+                        uword trampoline);
 
   static void VisitStack(Coroutine* coroutine, ObjectPointerVisitor* visitor);
 
@@ -47,9 +51,7 @@ class Coroutine {
 
   uword trampoline() const { return trampoline_; }
   void set_trampoline(uword trampoline) { trampoline_ = trampoline; }
-  static uword trampoline_offset() {
-    return OFFSET_OF(Coroutine, trampoline_);
-  }
+  static uword trampoline_offset() { return OFFSET_OF(Coroutine, trampoline_); }
 
   DART_FORCE_INLINE
   uword attributes() const { return attributes_; }
@@ -82,20 +84,14 @@ class Coroutine {
   DART_FORCE_INLINE
   void set_attributes(uword value) { attributes_ = value; }
   DART_FORCE_INLINE
-  void or_attribute(uword value) {
-    set_attributes(attributes() | value);
-  }
+  void or_attribute(uword value) { set_attributes(attributes() | value); }
   DART_FORCE_INLINE
   void change_state(uword from_value, uword to_value) {
     set_attributes((attributes() & ~from_value) | to_value);
   }
   DART_FORCE_INLINE
-  void and_attribute(uword value) {
-    set_attributes(attributes() & value);
-  }
-  static uword attributes_offset() {
-    return OFFSET_OF(Coroutine, attributes_);
-  }
+  void and_attribute(uword value) { set_attributes(attributes() & value); }
+  static uword attributes_offset() { return OFFSET_OF(Coroutine, attributes_); }
 
   uword index() const { return index_; }
   void set_index(uword index) { index_ = index; }
@@ -105,9 +101,7 @@ class Coroutine {
   static uword caller_offset() { return OFFSET_OF(Coroutine, caller_); }
 
   uword stack_size() const { return stack_size_; }
-  static uword stack_size_offset() {
-    return OFFSET_OF(Coroutine, stack_size_);
-  }
+  static uword stack_size_offset() { return OFFSET_OF(Coroutine, stack_size_); }
 
   uword native_stack_base() const { return native_stack_base_; }
   static uword native_stack_base_offset() {
@@ -115,14 +109,10 @@ class Coroutine {
   }
 
   uword stack_root() const { return stack_root_; }
-  static uword stack_root_offset() {
-    return OFFSET_OF(Coroutine, stack_root_);
-  }
+  static uword stack_root_offset() { return OFFSET_OF(Coroutine, stack_root_); }
 
   uword stack_base() const { return stack_base_; }
-  static uword stack_base_offset() {
-    return OFFSET_OF(Coroutine, stack_base_);
-  }
+  static uword stack_base_offset() { return OFFSET_OF(Coroutine, stack_base_); }
 
   uword stack_limit() const { return stack_limit_; }
   static uword stack_limit_offset() {
@@ -130,9 +120,7 @@ class Coroutine {
   }
 
   uword owner() const { return owner_; }
-  static uword owner_offset() {
-    return OFFSET_OF(Coroutine, owner_);
-  }
+  static uword owner_offset() { return OFFSET_OF(Coroutine, owner_); }
 
   uword overflow_stack_limit() const { return overflow_stack_limit_; }
   static uword overflow_stack_limit_offset() {

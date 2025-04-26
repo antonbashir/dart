@@ -13,7 +13,6 @@
 #include <tuple>
 #include <utility>
 
-#include "vm/tagged_pointer.h"
 #include "include/dart_api.h"
 #include "platform/assert.h"
 #include "platform/atomic.h"
@@ -37,6 +36,7 @@
 #include "vm/raw_object.h"
 #include "vm/report.h"
 #include "vm/static_type_exactness_state.h"
+#include "vm/tagged_pointer.h"
 #include "vm/thread.h"
 #include "vm/token_position.h"
 

@@ -147,7 +147,6 @@ bool StubCode::InCoroutineInitializeStub(uword pc) {
   uword entry = StubCode::CoroutineInitialize().EntryPoint();
   uword size = StubCode::CoroutineInitializeSize();
   return ((pc >= entry) && (pc < (entry + size)));
-  
 }
 
 bool StubCode::InCoroutineForkStub(uword pc) {

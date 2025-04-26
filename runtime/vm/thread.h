@@ -9,7 +9,6 @@
 #error "Should not include runtime"
 #endif
 
-#include "vm/tagged_pointer.h"
 #include <setjmp.h>
 #include "include/dart_api.h"
 #include "platform/assert.h"
@@ -18,6 +17,7 @@
 #include "vm/bitfield.h"
 #include "vm/compiler/runtime_api.h"
 #include "vm/constants.h"
+#include "vm/coroutine.h"
 #include "vm/globals.h"
 #include "vm/handles.h"
 #include "vm/heap/pointer_block.h"
@@ -26,10 +26,10 @@
 #include "vm/pending_deopts.h"
 #include "vm/random.h"
 #include "vm/runtime_entry_list.h"
+#include "vm/tagged_pointer.h"
 #include "vm/tags.h"
 #include "vm/thread_stack_resource.h"
 #include "vm/thread_state.h"
-#include "vm/coroutine.h"
 
 namespace dart {
 
@@ -1187,10 +1187,13 @@ class Thread : public ThreadState {
   };
   friend class RestoreWriteBarrierInvariantVisitor;
   void RestoreWriteBarrierInvariant(RestoreWriteBarrierInvariantOp op);
-  
-  void RestoreWriteBarrierInvariantCoroutine(Isolate* isolate, RestoreWriteBarrierInvariantOp op);
 
-  void VisitObjectPointersCoroutine(Isolate* isolate, ObjectPointerVisitor* visitor, ValidationPolicy validate_frames);
+  void RestoreWriteBarrierInvariantCoroutine(Isolate* isolate,
+                                             RestoreWriteBarrierInvariantOp op);
+
+  void VisitObjectPointersCoroutine(Isolate* isolate,
+                                    ObjectPointerVisitor* visitor,
+                                    ValidationPolicy validate_frames);
 
   // Set the current compiler state and return the previous compiler state.
   CompilerState* SetCompilerState(CompilerState* state) {
