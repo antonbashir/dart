@@ -75,7 +75,7 @@ class _FiberProcessor {
     final fiber = _FiberFactory._main(this, _main, argument: argument, size: size);
     _schedule(fiber);
     _running = true;
-    Coroutine_initialize(_scheduler._coroutine);
+    _Coroutine_initialize(_scheduler._coroutine);
     _pool.clear();
     _running = false;
     return fiber;
@@ -101,11 +101,11 @@ class _FiberProcessor {
       var first = last;
       while (!scheduled._isEmpty) {
         final caller = scheduled._removeHead();
-        Coroutine_setCaller(last._fiber._coroutine, caller._fiber._coroutine);
+        _Coroutine_setCaller(last._fiber._coroutine, caller._fiber._coroutine);
         last = caller;
       }
-      Coroutine_setCaller(last._fiber._coroutine, scheduler._coroutine);
-      Coroutine_transfer(scheduler._coroutine, first._fiber._coroutine);
+      _Coroutine_setCaller(last._fiber._coroutine, scheduler._coroutine);
+      _Coroutine_transfer(scheduler._coroutine, first._fiber._coroutine);
       if (first._fiber.state.disposed) {
         _pool.free(first._fiber.index);
       }
@@ -130,11 +130,11 @@ class _FiberProcessor {
       var first = last;
       while (!scheduled._isEmpty) {
         final caller = scheduled._removeHead();
-        Coroutine_setCaller(last._fiber._coroutine, caller._fiber._coroutine);
+        _Coroutine_setCaller(last._fiber._coroutine, caller._fiber._coroutine);
         last = caller;
       }
-      Coroutine_setCaller(last._fiber._coroutine, scheduler._coroutine);
-      Coroutine_transfer(scheduler._coroutine, first._fiber._coroutine);
+      _Coroutine_setCaller(last._fiber._coroutine, scheduler._coroutine);
+      _Coroutine_transfer(scheduler._coroutine, first._fiber._coroutine);
       if (first._fiber.state.disposed) {
         _pool.free(first._fiber.index);
       }

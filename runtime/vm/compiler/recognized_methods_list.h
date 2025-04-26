@@ -381,17 +381,16 @@ namespace dart {
   V(::, _memCopy, MemCopy, 0x51939aa6)                                         \
   V(::, debugger, Debugger, 0xf0aaff14)                                        \
   V(::, _checkNotDeeplyImmutable, CheckNotDeeplyImmutable, 0x34e4da90)         \
-  V(::, Coroutine_initialize, CoroutineInitialize, 0xe0dfad8c)                 \
-  V(::, Coroutine_transfer, CoroutineTransfer, 0x692fe7c7)                     \
-  V(::, Coroutine_fork, CoroutineFork, 0x93e9f845)                             \
-  V(::, Coroutine_getAttributes, Coroutine_getAttributes, 0x35c7d95c)          \
-  V(::, Coroutine_setAttributes, Coroutine_setAttributes, 0x0ccc5943)          \
-  V(::, Coroutine_getCaller, Coroutine_getCaller, 0x317b93ba)                  \
-  V(::, Coroutine_setCaller, Coroutine_setCaller, 0x8f28c36d)                  \
-  V(::, Coroutine_getIndex, Coroutine_getIndex, 0x43806848)                    \
-  V(::, Coroutine_getOwner, Coroutine_getOwner, 0x2e474692)                    \
-  V(::, Coroutine_current, Coroutine_current, 0xadd9a634)                \
-
+  V(::, _Coroutine_initialize, CoroutineInitialize, 0xe0dfad8c)                \
+  V(::, _Coroutine_transfer, CoroutineTransfer, 0x692fe7c7)                    \
+  V(::, _Coroutine_fork, CoroutineFork, 0x93e9f845)                            \
+  V(::, _Coroutine_getAttributes, Coroutine_getAttributes, 0x35c7d95c)         \
+  V(::, _Coroutine_setAttributes, Coroutine_setAttributes, 0x0ccc5943)         \
+  V(::, _Coroutine_getCaller, Coroutine_getCaller, 0x317b93ba)                 \
+  V(::, _Coroutine_setCaller, Coroutine_setCaller, 0x8f28c36d)                 \
+  V(::, _Coroutine_getIndex, Coroutine_getIndex, 0x43806848)                   \
+  V(::, _Coroutine_getOwner, Coroutine_getOwner, 0x2e474692)                   \
+  V(::, _Coroutine_current, Coroutine_current, 0xadd9a634)                     \
 
 
 // List of intrinsics:

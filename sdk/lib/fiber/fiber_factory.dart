@@ -4,7 +4,7 @@ class _FiberFactory {
   @pragma("vm:prefer-inline")
   static Fiber _scheduler(_FiberProcessor processor) {
     final fiber = _pool.allocate();
-    final coroutine = Coroutine_create(_kSchedulerStackSize, fiber._index, fiber, _kFiberCreated, Fiber._run)!;
+    final coroutine = _Coroutine_create(_kSchedulerStackSize, fiber._index, fiber, _kFiberCreated, Fiber._run)!;
     fiber._initialize(
       name: _kSchedulerFiber,
       size: _kSchedulerStackSize,
@@ -23,7 +23,7 @@ class _FiberFactory {
     int size = _kDefaultStackSize,
   }) {
     final fiber = _pool.allocate();
-    final coroutine = Coroutine_create(size, fiber._index, fiber, _kFiberCreated, Fiber._run)!;
+    final coroutine = _Coroutine_create(size, fiber._index, fiber, _kFiberCreated, Fiber._run)!;
     fiber._initialize(
       name: _kMainFiber,
       size: _kDefaultStackSize,
@@ -47,7 +47,7 @@ class _FiberFactory {
   }) {
     final current = Fiber.current;
     final fiber = _pool.allocate();
-    final coroutine = Coroutine_create(size, fiber._index, fiber, FiberAttributes._calculate(persistent: persistent).value, Fiber._run)!;
+    final coroutine = _Coroutine_create(size, fiber._index, fiber, FiberAttributes._calculate(persistent: persistent).value, Fiber._run)!;
     fiber._initialize(
       name: name ?? entry.toString(),
       size: size,

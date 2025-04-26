@@ -463,7 +463,7 @@ class IncrementalForwardingVisitor : public ObjectPointerVisitor,
   }
 
   bool CanVisitSuspendStatePointers(SuspendStatePtr suspend_state) override {
-    if ((suspend_state->untag()->pc() != 0) && !can_visit_suspend_states_) {
+    if ((suspend_state->untag()->pc() != 0) && !can_visit_stack_frames_) {
       // Visiting pointers of SuspendState objects with copied stack frame
       // needs to query stack map, which can touch other Dart objects
       // (such as GrowableObjectArray of InstructionsTable).
@@ -494,7 +494,7 @@ class IncrementalForwardingVisitor : public ObjectPointerVisitor,
   }
 
   void UpdateSuspendStates() {
-    can_visit_suspend_states_ = true;
+    can_visit_stack_frames_ = true;
     const intptr_t length = suspend_states_.length();
     for (intptr_t i = 0; i < length; ++i) {
       auto suspend_state = suspend_states_[i];
@@ -503,7 +503,7 @@ class IncrementalForwardingVisitor : public ObjectPointerVisitor,
   }
 
  private:
-  bool can_visit_suspend_states_ = false;
+  bool can_visit_stack_frames_ = false;
   MallocGrowableArray<TypedDataViewPtr> typed_data_views_;
   MallocGrowableArray<SuspendStatePtr> suspend_states_;
 

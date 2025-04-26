@@ -83,7 +83,7 @@ class GCCompactor : public ValueObject,
 
   // SuspendState objects with copied frame must be updated after sliding is
   // complete.
-  bool can_visit_suspend_states_ = false;
+  bool can_visit_stack_frames_ = false;
   Mutex postponed_suspend_states_mutex_;
   MallocGrowableArray<SuspendStatePtr> postponed_suspend_states_;
 };

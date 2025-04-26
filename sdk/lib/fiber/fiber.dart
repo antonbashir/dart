@@ -1,5 +1,8 @@
 library dart.fiber;
 
+import 'dart:async';
+import 'dart:collection';
+
 part 'fiber_processor.dart';
 part 'fiber_factory.dart';
 part 'fiber_pool.dart';
@@ -19,22 +22,24 @@ const _kFiberPersistent = 1 << 5;
 
 extension type _Coroutine(int handle) {}
 
-external _Coroutine? Coroutine_create(int size, int owner_index, Object owner, int attributes, Function trampoline);
+external _Coroutine? _Coroutine_create(int size, int owner_index, Object owner, int attributes, Function trampoline);
 
-external void Coroutine_initialize(_Coroutine root);
-external void Coroutine_transfer(_Coroutine from, _Coroutine to);
-external void Coroutine_fork(_Coroutine from, _Coroutine to);
+external void _Coroutine_idle(int timeout);
 
-external _Coroutine? Coroutine_current();
+external void _Coroutine_initialize(_Coroutine root);
+external void _Coroutine_transfer(_Coroutine from, _Coroutine to);
+external void _Coroutine_fork(_Coroutine from, _Coroutine to);
 
-external int Coroutine_getIndex(_Coroutine coroutine);
-external int Coroutine_getOwner(_Coroutine coroutine);
+external _Coroutine? _Coroutine_current();
 
-external int Coroutine_getAttributes(_Coroutine coroutine);
-external void Coroutine_setAttributes(_Coroutine coroutine, int attributes);
+external int _Coroutine_getIndex(_Coroutine coroutine);
+external int _Coroutine_getOwner(_Coroutine coroutine);
 
-external _Coroutine? Coroutine_getCaller(_Coroutine coroutine);
-external void Coroutine_setCaller(_Coroutine coroutine, _Coroutine caller);
+external int _Coroutine_getAttributes(_Coroutine coroutine);
+external void _Coroutine_setAttributes(_Coroutine coroutine, int attributes);
+
+external _Coroutine? _Coroutine_getCaller(_Coroutine coroutine);
+external void _Coroutine_setCaller(_Coroutine coroutine, _Coroutine caller);
 
 enum FiberStateKind { created, running, suspended, finished, disposed, unknown }
 
@@ -163,9 +168,6 @@ class Fiber {
       persistent: persistent,
     );
     Fiber.fork(child);
-    if (child.state.disposed) {
-      _pool.free(child.index);
-    }
     return child;
   }
 
@@ -175,30 +177,34 @@ class Fiber {
 
     assert(callee.state.created || callee.state.finished);
 
-    Coroutine_setCaller(callee._coroutine, caller._coroutine);
+    _Coroutine_setCaller(callee._coroutine, caller._coroutine);
 
-    final callerAttributes = Coroutine_getAttributes(caller._coroutine);
-    Coroutine_setAttributes(caller._coroutine, (callerAttributes & ~_kFiberRunning) | _kFiberSuspended);
+    final callerAttributes = _Coroutine_getAttributes(caller._coroutine);
+    _Coroutine_setAttributes(caller._coroutine, (callerAttributes & ~_kFiberRunning) | _kFiberSuspended);
 
-    final calleeAttributes = Coroutine_getAttributes(callee._coroutine);
-    Coroutine_setAttributes(callee._coroutine, (calleeAttributes & ~_kFiberCreated & ~_kFiberFinished) | _kFiberRunning);
+    final calleeAttributes = _Coroutine_getAttributes(callee._coroutine);
+    _Coroutine_setAttributes(callee._coroutine, (calleeAttributes & ~_kFiberCreated & ~_kFiberFinished) | _kFiberRunning);
 
-    Coroutine_fork(caller._coroutine, callee._coroutine);
+    _Coroutine_fork(caller._coroutine, callee._coroutine);
+
+    if (callee.state.disposed) {
+      _pool.free(callee.index);
+    }
   }
 
   @pragma("vm:prefer-inline")
   static void suspend() {
     final currentFiber = Fiber.current;
-    final calleeCoroutine = Coroutine_getCaller(currentFiber._coroutine)!;
-    Coroutine_setCaller(currentFiber._coroutine, currentFiber._scheduler._coroutine);
-    Coroutine_transfer(currentFiber._coroutine, calleeCoroutine);
+    final calleeCoroutine = _Coroutine_getCaller(currentFiber._coroutine)!;
+    _Coroutine_setCaller(currentFiber._coroutine, currentFiber._scheduler._coroutine);
+    _Coroutine_transfer(currentFiber._coroutine, calleeCoroutine);
   }
 
   @pragma("vm:never-inline")
   static Fiber get current {
-    final current = Coroutine_current();
+    final current = _Coroutine_current();
     assert(current != null);
-    return _pool.get(Coroutine_getOwner(current!));
+    return _pool.get(_Coroutine_getOwner(current!));
   }
 
   @pragma("vm:prefer-inline")
@@ -223,10 +229,10 @@ class Fiber {
   String get name => _name;
 
   @pragma("vm:prefer-inline")
-  FiberState get state => FiberState(Coroutine_getAttributes(_coroutine));
+  FiberState get state => FiberState(_Coroutine_getAttributes(_coroutine));
 
   @pragma("vm:prefer-inline")
-  FiberAttributes get attributes => FiberAttributes(Coroutine_getAttributes(_coroutine));
+  FiberAttributes get attributes => FiberAttributes(_Coroutine_getAttributes(_coroutine));
 
   @pragma("vm:prefer-inline")
   FiberArgument get argument => FiberArgument(_argument);
